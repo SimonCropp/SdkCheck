@@ -36,10 +36,14 @@ version baseline is maintained here.
 
 - Adding or changing a diagnostic code means updating `docs/DiagnosticCodes.md` in the same change.
   `Diagnostics.DocsUrl` deep-links every emitted message to a section there.
-- Nothing this package discovers may fail a consumer's build except an out-of-support channel. An
-  unreachable feed, a corrupt cache, a version the feed has never heard of: all resolve to a
-  low-importance message. A package that breaks builds when a network hiccups gets removed long
-  before it catches a CVE.
+- Nothing this package discovers may fail a consumer's build except the SDK running it sitting on an
+  out-of-support channel. An unreachable feed, a corrupt cache, a version the feed has never heard
+  of: all resolve to a low-importance message. A package that breaks builds when a network hiccups
+  gets removed long before it catches a CVE.
+- An out-of-support target framework warns rather than erroring. The SDK is a machine property that
+  installing a supported one fixes that day; a target framework is a support decision the project
+  made deliberately, so erroring turns the date a channel dies into a build break with no change
+  behind it. `SdkCheckEolAsError` set explicitly still applies to both.
 - End of support is tested before the version comparison. On a dead channel there is no newer
   security release, so a plain "am I behind?" check reports nothing - it goes silent at exactly the
   point exposure stops being fixable.

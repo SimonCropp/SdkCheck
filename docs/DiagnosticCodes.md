@@ -36,7 +36,8 @@ same ids with their urls.
 ## SdkCheck002
 
 - **Name:** Channel is out of support
-- **Level:** **Error.** Set `SdkCheckEolAsError` to `false` to downgrade it to a warning.
+- **Level:** **Error** when the SDK running the build sits on the channel, warning when a runtime
+  does. Set `SdkCheckEolAsError` to `true` or `false` to apply one level to both.
 - **Meaning:** The channel has passed its end-of-support date, or is marked `eol` in the release
   metadata. No further security patches will ship for it, so any CVE published against it from now on
   is unfixable in place.
@@ -46,8 +47,13 @@ same ids with their urls.
 - **Example:** `The .NET 6.0 channel reached end of support on 2024-11-12. ...`
 - **Fix:** Move to a supported channel.
 
-This is the one case that errors by default. Everything else has a version to move to on the same
-channel; this does not.
+The SDK is the one case that errors by default. Everything else has a version to move to on the same
+channel; a dead channel does not. The SDK doing the build is a property of the machine, so installing
+a supported one fixes it that day.
+
+A target framework on a dead channel is left as a warning. Targeting one is a decision the project
+made deliberately, for consumers who are still there, and no build that has not changed should start
+failing on the date the channel dies - least of all on the say-so of a remote feed.
 
 It is also the case that is easiest to get wrong, and the reason end of support is tested before the
 version comparison. On a dead channel there is by definition no newer security release, so a plain

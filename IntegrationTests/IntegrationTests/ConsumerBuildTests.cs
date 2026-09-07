@@ -108,6 +108,20 @@ public class ConsumerBuildTests
     }
 
     /// <summary>
+    /// An out-of-support target framework warns, and the build still succeeds. Erroring would turn
+    /// the date a channel dies into a build break with no change behind it, over a support decision
+    /// the project made deliberately.
+    /// </summary>
+    [Test]
+    public async Task EolTargetFrameworkOnlyWarns()
+    {
+        var result = await Build("Consumer.MultiTargeted", FeedShape.Clean, eolChannel: "8.0");
+
+        await Assert.That(result.ExitCode).IsEqualTo(0).Because(result.Combined);
+        await Assert.That(result.Combined).Contains("SdkCheck002").Because(result.Combined);
+    }
+
+    /// <summary>
     /// No feed, no cache, no network permitted: the build still has to succeed and say nothing.
     /// </summary>
     [Test]
@@ -192,6 +206,7 @@ public class ConsumerBuildTests
         IReadOnlyDictionary<string, string>? extraProperties = null,
         string verbosity = "minimal",
         string? sdkVersion = null,
+        string? eolChannel = null,
         [CallerMemberName] string caller = "")
     {
         var package = PackageUnderTest.Ensure();
@@ -228,7 +243,7 @@ public class ConsumerBuildTests
         var properties = new Dictionary<string, string>
         {
             ["SdkCheckVersion"] = package.Version,
-            ["SdkCheckFeedOverride"] = FeedBuilder.Write(DotnetCliRunner.SdkVersion(work), shape),
+            ["SdkCheckFeedOverride"] = FeedBuilder.Write(DotnetCliRunner.SdkVersion(work), shape, eolChannel),
             ["Configuration"] = "Release"
         };
 

@@ -26,7 +26,7 @@ public enum FeedShape
 /// </remarks>
 public static class FeedBuilder
 {
-    public static string Write(string sdkVersion, FeedShape shape)
+    public static string Write(string sdkVersion, FeedShape shape, string? eolChannel = null)
     {
         var directory = Path.Combine(Path.GetTempPath(), "sdkcheck-it-feeds", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -35,6 +35,17 @@ public static class FeedBuilder
         var channel = $"{parts[0]}.{parts[1]}";
 
         File.WriteAllText(Path.Combine(directory, $"{channel}.json"), Channel(channel, sdkVersion, shape));
+
+        // A second channel, out of support, for a target framework older than the SDK doing the
+        // build. It is the only way to reach a runtime finding while the SDK itself is clean, and
+        // the two default to different severities.
+        if (eolChannel != null)
+        {
+            File.WriteAllText(
+                Path.Combine(directory, $"{eolChannel}.json"),
+                Channel(eolChannel, $"{eolChannel}.100", FeedShape.Eol));
+        }
+
         return directory;
     }
 

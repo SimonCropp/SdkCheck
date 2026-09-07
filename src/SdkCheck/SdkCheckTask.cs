@@ -33,6 +33,11 @@ public class SdkCheckTask :
     public ITaskItem[] RuntimePacks { get; set; } = [];
 
     public string TreatAsError { get; set; } = "";
+
+    /// <summary>
+    /// Whether an out-of-support channel fails the build. Unset, it defaults per component: an error
+    /// for the SDK, a warning for a runtime.
+    /// </summary>
     public string EolAsError { get; set; } = "";
     public string IncludeRuntime { get; set; } = "";
     public string IncludeRuntimePacks { get; set; } = "";
@@ -163,8 +168,15 @@ public class SdkCheckTask :
             return;
         }
 
+        // Unset, an out-of-support channel is an error for the SDK and a warning for anything
+        // else. The SDK is a property of the machine running the build, and installing a supported
+        // one fixes it today. A target framework on a dead channel is a support decision the
+        // project already made deliberately - a library targeting net6.0 does so for the consumers
+        // still there - and breaking that build on a date, from a remote feed, with no change to
+        // the project, is not a discovery worth failing over. Set explicitly, the value applies to
+        // both.
         var asError = finding.Code == Diagnostics.Eol
-            ? Flag(EolAsError, true)
+            ? Flag(EolAsError, finding.Component.IsSdk)
             : Flag(TreatAsError, false);
 
         if (asError)

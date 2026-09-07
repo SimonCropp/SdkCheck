@@ -78,12 +78,19 @@ bigger half.
 | Code | Meaning | Default |
 |---|---|---|
 | [SdkCheck001](/docs/DiagnosticCodes.md#sdkcheck001) | SDK has published CVEs | Warning |
-| [SdkCheck002](/docs/DiagnosticCodes.md#sdkcheck002) | Channel is out of support | **Error** |
+| [SdkCheck002](/docs/DiagnosticCodes.md#sdkcheck002) | Channel is out of support | **Error** for the SDK, warning for a runtime |
 | [SdkCheck003](/docs/DiagnosticCodes.md#sdkcheck003) | Runtime has published CVEs | Warning |
 | [SdkCheck004](/docs/DiagnosticCodes.md#sdkcheck004) | Release metadata unavailable | Message |
 
-Only SdkCheck002 fails a build by default. Everything else has a version to move to on the same
-channel; an out-of-support channel does not, so a CVE published against it is unfixable in place.
+Only an out-of-support SDK fails a build by default. Everything else has a version to move to on
+the same channel; a dead channel does not, so a CVE published against it is unfixable in place. The
+SDK is a property of the machine running the build, and installing a supported one fixes it that
+day.
+
+A target framework on a dead channel warns instead. That one is a support decision the project made
+deliberately - a library targets net6.0 for the consumers still there - and a build that has not
+changed should not start failing on the date the channel dies. `SdkCheckEolAsError` set explicitly
+applies one level to both.
 
 Each code is suppressible with `NoWarn` in the ordinary way. See
 [the full reference](/docs/DiagnosticCodes.md).
@@ -95,7 +102,7 @@ Each code is suppressible with `NoWarn` in the ordinary way. See
 |---|---|---|
 | `SdkCheckEnabled` | `true` | Turn the whole check off. |
 | `SdkCheckTreatAsError` | `false` | Fail the build on SdkCheck001 and SdkCheck003. |
-| `SdkCheckEolAsError` | `true` | Fail the build on SdkCheck002. |
+| `SdkCheckEolAsError` | SDK only | `true` fails the build on SdkCheck002 for every component, `false` for none. |
 | `SdkCheckIncludeRuntime` | `true` | Check the runtime the output targets. |
 | `SdkCheckIncludeRuntimePacks` | `true` | Check self-contained runtime packs. |
 | `SdkCheckCacheHours` | `24` | How long a fetched feed stays fresh. |
