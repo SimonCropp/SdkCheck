@@ -1,0 +1,48 @@
+# SdkCheck
+
+An MSBuild task and a dotnet tool that warn when the .NET SDK or runtime in use has published CVEs,
+or sits on an out-of-support channel. Data comes from Microsoft's live release metadata feed, so no
+version baseline is maintained here.
+
+## Layout
+
+- `src/` holds the solution. The repo root is one level up: `ProjectDefaults` derives `RepoDir` from
+  the `.git` directory above `$(SolutionDir)` and writes packages to `<root>/nugets`.
+- `src/SdkCheck.Core` - the logic. Not published; it reaches consumers inside the task package and
+  the tool.
+- `src/SdkCheck` - the MSBuild task package. `netstandard2.0` for .NET Framework MSBuild, `net10.0`
+  for `dotnet build`.
+- `src/SdkCheck.Tool` - the `sdkcheck` command.
+- `IntegrationTests/` is a separate solution. It builds real consumer projects against the nupkg the
+  `src` Release build emits, so `dotnet build src -c Release` must run first.
+
+## Conventions
+
+- `ProjectDefaults` supplies packaging metadata, nullable, implicit usings and code style. Do not set
+  those per-project, and never hand-edit `.editorconfig` or `Shared.sln.DotSettings` - both are
+  overwritten from the package on every build.
+- One `NoWarn` property in `src/Directory.Build.props`. A second declaration replaces the first
+  rather than appending.
+- Tests are TUnit plus Verify, run with
+  `dotnet run --project <project> -c Release --no-build -- --no-ansi --progress off`. Filtering uses
+  `--treenode-filter`, not `--filter`.
+- Snapshots under ten lines are inlined into the test source by `VerifierSettings.Inline`.
+- `readme.md` and `docs/*.md` are maintained in place by MarkdownSnippets (`InPlaceOverwrite`), and
+  `ValidateContent` fails the build on stale content. It also enforces a house style: no second
+  person, and no "just", "simple", "easy", "we", "our", "please".
+- Snippets come from the real fixture files under `IntegrationTests/Fixtures`, so documented usage
+  cannot drift from what is tested.
+
+## Rules
+
+- Adding or changing a diagnostic code means updating `docs/DiagnosticCodes.md` in the same change.
+  `Diagnostics.DocsUrl` deep-links every emitted message to a section there.
+- Nothing this package discovers may fail a consumer's build except an out-of-support channel. An
+  unreachable feed, a corrupt cache, a version the feed has never heard of: all resolve to a
+  low-importance message. A package that breaks builds when a network hiccups gets removed long
+  before it catches a CVE.
+- End of support is tested before the version comparison. On a dead channel there is no newer
+  security release, so a plain "am I behind?" check reports nothing - it goes silent at exactly the
+  point exposure stops being fixable.
+- Never hand a raw feed version to `Version.Parse`. Prerelease release-versions like `8.0.0-rc.2`
+  throw. Use `ReleaseVersion`.

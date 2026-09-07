@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="../.gitattributes" />
+    <File Path="../.gitignore" />
+    <File Path="../readme.md" />
+    <File Path="../.editorconfig" />
+    <File Path="../global.json" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="mdsnippets.json" />
+    <File Path="nuget.config" />
+    <File Path="../.github/workflows/test.yml" />
+    <File Path="../.github/workflows/publish-nuget.yml" />
+  </Folder>
+  <Project Path="SdkCheck.Core/SdkCheck.Core.csproj" />
+  <Project Path="SdkCheck.Core.Tests/SdkCheck.Core.Tests.csproj" />
+  <Project Path="SdkCheck/SdkCheck.csproj" />
+  <Project Path="SdkCheck.Tests/SdkCheck.Tests.csproj" />
+  <Project Path="SdkCheck.Tool/SdkCheck.Tool.csproj" />
+  <Project Path="SdkCheck.Tool.Tests/SdkCheck.Tool.Tests.csproj" />
+</Solution>

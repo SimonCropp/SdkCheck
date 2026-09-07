@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ToolCommandName>sdkcheck</ToolCommandName>
+    <AssemblyName>sdkcheck</AssemblyName>
+    <PackageId>SdkCheck.Tool</PackageId>
+    <PackAsTool>true</PackAsTool>
+    <RootNamespace>SdkCheck.Tool</RootNamespace>
+    <Description>Command line check for .NET SDKs and runtimes with published CVEs, for use on a schedule rather than only when something builds.</Description>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!-- The installed SDK may be newer than this tool's TFM. -->
+    <RollForward>LatestMajor</RollForward>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" />
+    <PackageReference Include="ProjectDefaults" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" Condition="'$(CI)' == 'true'" />
+    <ProjectReference Include="..\SdkCheck.Core\SdkCheck.Core.csproj" />
+  </ItemGroup>
+</Project>

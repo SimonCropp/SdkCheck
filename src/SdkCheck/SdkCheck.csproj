@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- netstandard2.0 for .NET Framework MSBuild (Visual Studio, and Rider when it uses the
+         Framework toolchain), net10.0 for dotnet build. SdkCheck.targets picks by
+         $(MSBuildRuntimeType). -->
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <!-- Pulls SdkCheck.Core, and on netstandard2.0 System.Text.Json and its closure, into
+         bin/{Configuration}/{tfm}/ so _SdkCheck_PackTaskDlls can glob them into tasks/. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- NU5128: no lib/ or ref/ for the declared frameworks. NU5100: assemblies outside lib/.
+         Both are the intended shape for a task package. -->
+    <NoWarn>$(NoWarn);NU5128;NU5100</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ExcludeAssets=Runtime keeps the MSBuild assemblies out of bin/, so the glob below cannot
+         ship a second copy of MSBuild into the process that is already running it. -->
+    <PackageReference Include="Microsoft.Build.Utilities.Core" PrivateAssets="all" ExcludeAssets="Runtime" />
+    <PackageReference Include="Microsoft.Build.Framework" PrivateAssets="all" ExcludeAssets="Runtime" />
+    <PackageReference Include="ProjectDefaults" PrivateAssets="all" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" Condition="'$(CI)' == 'true'" />
+    <ProjectReference Include="..\SdkCheck.Core\SdkCheck.Core.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="build\SdkCheck.targets" Pack="true"
+          PackagePath="build\SdkCheck.targets;buildMultiTargeting\SdkCheck.targets" />
+  </ItemGroup>
+
+  <Target Name="_SdkCheck_PackTaskDlls" BeforeTargets="_GetPackageFiles">
+    <ItemGroup>
+      <!-- Forward slash, not backslash, in PackagePath: MSBuild on Linux normalizes a trailing '\'
+           to '/', then NuGet pack appends another before the filename, producing
+           'tasks/netstandard2.0//SdkCheck.dll'. A forward slash yields the same single-slash path
+           on both platforms. -->
+      <None Include="bin\$(Configuration)\netstandard2.0\*.dll" Pack="true" PackagePath="tasks/netstandard2.0/" Visible="false" />
+      <None Include="bin\$(Configuration)\net10.0\*.dll" Pack="true" PackagePath="tasks/net10.0/" Visible="false" />
+    </ItemGroup>
+  </Target>
+</Project>

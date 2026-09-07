@@ -1,0 +1,64 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # This also packs: ProjectDefaults sets GeneratePackageOnBuild for Release package projects,
+      # so the nupkgs land in ./nugets from the build itself.
+      - name: Build src
+        run: dotnet build src --configuration Release
+
+      - name: Test core
+        run: dotnet run --project src/SdkCheck.Core.Tests --configuration Release --no-build -- --no-ansi --progress off
+
+      - name: Test task
+        run: dotnet run --project src/SdkCheck.Tests --configuration Release --no-build -- --no-ansi --progress off
+
+      - name: Test tool
+        run: dotnet run --project src/SdkCheck.Tool.Tests --configuration Release --no-build -- --no-ansi --progress off
+
+      # Must follow the src build: the integration suite consumes the nupkg that build emits into
+      # ./nugets, staging it into a private feed and building real consumer projects against it.
+      - name: Build integration tests
+        id: build-integration
+        run: dotnet build IntegrationTests --configuration Release
+
+      - name: Test integration
+        if: ${{ !cancelled() && steps.build-integration.outcome == 'success' }}
+        run: dotnet run --project IntegrationTests/IntegrationTests --configuration Release --no-build -- --no-ansi --progress off
+
+      - name: Upload received snapshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: received-${{ matrix.os }}
+          path: '**/*.received.*'
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <RootNamespace>SdkCheck</RootNamespace>
+    <!-- Not published. The DLL reaches consumers two ways: CopyLocalLockFileAssemblies drops it in
+         the task package's tasks/ folder, and PackAsTool bundles it into the tool. Publishing it
+         separately would only add public API surface to maintain. -->
+    <IsPackageProject>false</IsPackageProject>
+    <!-- ProjectDefaults' props are imported before this file's body, so it has already set
+         GeneratePackageOnBuild by the time IsPackageProject is overridden above. Properties are
+         fully evaluated before items, so that override does suppress the icon item ProjectDefaults
+         adds - leaving a pack that declares an icon it does not contain (NU5046). Turning packing
+         off outright is what actually opts out. -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ProjectDefaults" PrivateAssets="all" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+    <!-- net10.0 has System.Text.Json in-box; referencing the package there would ship a redundant
+         copy in tasks/net10.0. -->
+    <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,86 @@
+{
+  "channel-version": "8.0",
+  "latest-release": "8.0.4",
+  "latest-release-date": "2024-04-09",
+  "latest-runtime": "8.0.4",
+  "latest-sdk": "8.0.204",
+  "support-phase": "active",
+  "release-type": "lts",
+  "eol-date": "2099-11-10",
+  "releases": [
+    {
+      "release-date": "2024-04-09",
+      "release-version": "8.0.4",
+      "security": true,
+      "cve-list": [
+        { "cve-id": "CVE-2024-0004", "cve-url": "https://example.invalid/CVE-2024-0004" }
+      ],
+      "runtime": { "version": "8.0.4" },
+      "sdk": { "version": "8.0.204" },
+      "sdks": [
+        { "version": "8.0.204" },
+        { "version": "8.0.106" }
+      ],
+      "aspnetcore-runtime": { "version": "8.0.4" },
+      "windowsdesktop": { "version": "8.0.4" }
+    },
+    {
+      "release-date": "2024-03-30",
+      "release-version": "8.0.5-rc.1",
+      "security": true,
+      "cve-list": [
+        { "cve-id": "CVE-2024-PRERELEASE", "cve-url": "https://example.invalid/prerelease" }
+      ],
+      "runtime": { "version": "8.0.5-rc.1" },
+      "sdk": { "version": "8.0.205-rc.1" },
+      "sdks": [
+        { "version": "8.0.205-rc.1" }
+      ]
+    },
+    {
+      "release-date": "2024-03-12",
+      "release-version": "8.0.3",
+      "security": false,
+      "cve-list": [],
+      "runtime": { "version": "8.0.3" },
+      "sdk": { "version": "8.0.203" },
+      "sdks": [
+        { "version": "8.0.203" },
+        { "version": "8.0.105" }
+      ],
+      "aspnetcore-runtime": { "version": "8.0.3" },
+      "windowsdesktop": { "version": "8.0.3" }
+    },
+    {
+      "release-date": "2024-02-13",
+      "release-version": "8.0.2",
+      "security": true,
+      "cve-list": [
+        { "cve-id": "CVE-2024-0002", "cve-url": "https://example.invalid/CVE-2024-0002" },
+        { "cve-id": "CVE-2024-0003", "cve-url": "https://example.invalid/CVE-2024-0003" },
+        { "cve-id": "CVE-2024-0004", "cve-url": "https://example.invalid/CVE-2024-0004" }
+      ],
+      "runtime": { "version": "8.0.2" },
+      "sdk": { "version": "8.0.202" },
+      "sdks": [
+        { "version": "8.0.202" },
+        { "version": "8.0.104" }
+      ],
+      "aspnetcore-runtime": { "version": "8.0.2" },
+      "windowsdesktop": { "version": "8.0.2" }
+    },
+    {
+      "release-date": "2023-11-14",
+      "release-version": "8.0.0",
+      "security": false,
+      "cve-list": [],
+      "runtime": { "version": "8.0.0" },
+      "sdk": { "version": "8.0.100" },
+      "sdks": [
+        { "version": "8.0.100" }
+      ],
+      "aspnetcore-runtime": { "version": "8.0.0" },
+      "windowsdesktop": { "version": "8.0.0" }
+    }
+  ]
+}

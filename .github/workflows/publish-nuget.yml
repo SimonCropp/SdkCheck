@@ -1,0 +1,100 @@
+name: publish-nuget
+
+# Packs SdkCheck and SdkCheck.Tool and pushes them to nuget.org using Trusted Publishing (OIDC), so
+# no long lived API key is stored anywhere. GitHub Actions mints a short lived OIDC token; the
+# NuGet/login action exchanges it for a temporary nuget.org API key, issued only because a matching
+# trusted-publishing policy is registered for this repo and this workflow file.
+#
+# One-time setup, which must be done before the first tag or the push fails:
+#   nuget.org -> Account -> Trusted Publishing: add a policy for owner SimonCropp, repository
+#   SdkCheck, scoped to this workflow file, covering both SdkCheck and SdkCheck.Tool.
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+permissions:
+  # Required: lets the job request a GitHub OIDC token.
+  id-token: write
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # A plain build is the pack step: ProjectDefaults sets GeneratePackageOnBuild for every Release
+      # package project, so each package is produced by its own build, in dependency order, into
+      # ./nugets. Deliberately not `dotnet pack`, which on a solution races with
+      # GeneratePackageOnBuild.
+      - name: Build and pack
+        run: dotnet build src --configuration Release
+
+      # A tag is the last cheap moment to find out. Running the suites here rather than trusting the
+      # test workflow on the same commit costs a couple of minutes and has caught worse.
+      - name: Test core
+        run: dotnet run --project src/SdkCheck.Core.Tests --configuration Release --no-build -- --no-ansi --progress off
+
+      - name: Test task
+        run: dotnet run --project src/SdkCheck.Tests --configuration Release --no-build -- --no-ansi --progress off
+
+      - name: Test tool
+        run: dotnet run --project src/SdkCheck.Tool.Tests --configuration Release --no-build -- --no-ansi --progress off
+
+      - name: Build integration tests
+        run: dotnet build IntegrationTests --configuration Release
+
+      - name: Test integration
+        run: dotnet run --project IntegrationTests/IntegrationTests --configuration Release --no-build -- --no-ansi --progress off
+
+      - name: Upload packages
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: nugets/*.nupkg
+          if-no-files-found: error
+
+      # Trusted publishing. nuget.org validates GitHub's OIDC token against the policy naming this
+      # repository and this workflow file, and returns a key good for about an hour - so this stays
+      # immediately before the push. Reached only when every step above succeeded.
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          # The nuget.org account the trusted publishing policy belongs to.
+          user: SimonCropp
+
+      # Enumerated rather than globbed. This job runs on Windows, where the shell is pwsh and a
+      # quoted wildcard reaches dotnet unexpanded, so "nugets/*.nupkg" is read as a literal filename
+      # and the push fails with "File does not exist".
+      #
+      # --skip-duplicate makes re-runs idempotent.
+      - name: Push to nuget.org
+        run: |
+          $packages = Get-ChildItem -Path nugets -Filter *.nupkg
+          if ($packages.Count -eq 0)
+          {
+            throw "No packages were produced by the build."
+          }
+
+          Write-Host "Pushing $($packages.Count) packages"
+          foreach ($package in $packages)
+          {
+            dotnet nuget push $package.FullName --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+            if ($LASTEXITCODE -ne 0)
+            {
+              throw "Failed to push $($package.Name)"
+            }
+          }

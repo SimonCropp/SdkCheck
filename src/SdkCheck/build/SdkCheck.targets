@@ -1,0 +1,63 @@
+<Project>
+  <!--
+    Every private property is scoped _SdkCheck_. MSBuild properties are global, so an unscoped name
+    written by two imports means the last import wins for the whole project.
+  -->
+  <PropertyGroup>
+    <_SdkCheck_TasksDir>$(MSBuildThisFileDirectory)..\tasks\</_SdkCheck_TasksDir>
+    <_SdkCheck_Assembly Condition="'$(MSBuildRuntimeType)' == 'Core'">$(_SdkCheck_TasksDir)net10.0\SdkCheck.dll</_SdkCheck_Assembly>
+    <_SdkCheck_Assembly Condition="'$(MSBuildRuntimeType)' != 'Core'">$(_SdkCheck_TasksDir)netstandard2.0\SdkCheck.dll</_SdkCheck_Assembly>
+
+    <SdkCheckEnabled Condition="'$(SdkCheckEnabled)' == ''">true</SdkCheckEnabled>
+
+    <!--
+      The SDK doing the build is the same whichever target framework is being built, so it is
+      checked on the first one only. The runtime check below still runs for every target framework,
+      because that one genuinely differs per TFM.
+
+      The task also deduplicates in-process, but that cannot be relied on here: MSBuild farms inner
+      builds out to separate nodes, and a registered task object lives in one node's registry.
+    -->
+    <_SdkCheck_SdkVersion>$(NETCoreSdkVersion)</_SdkCheck_SdkVersion>
+    <_SdkCheck_SdkVersion
+      Condition="'$(TargetFrameworks)' != '' and
+                 '$(TargetFramework)' != $([MSBuild]::ValueOrDefault('$(TargetFrameworks)', '').Split(';')[0])"
+    ></_SdkCheck_SdkVersion>
+  </PropertyGroup>
+
+  <UsingTask TaskName="SdkCheckTask"
+             AssemblyFile="$(_SdkCheck_Assembly)" />
+
+  <!--
+    Hooked after ResolveFrameworkReferences so @(ResolvedFrameworkReference) and
+    @(ResolvedRuntimePack) are populated, and the runtime versions can be read rather than guessed
+    from the SDK's bundled one.
+
+    Runs once per target framework, not once per project: a multi-targeted project resolves a
+    different runtime for each TFM. The task deduplicates findings across the whole build, so this
+    does not produce repeated warnings.
+
+    Deliberately no Inputs/Outputs. Incremental skipping would suppress the warning on every build
+    after the first, and a diagnostic that disappears on rebuild is worse than the millisecond it
+    costs to re-check a cached feed.
+  -->
+  <Target Name="SdkCheck"
+          AfterTargets="ResolveFrameworkReferences"
+          Condition="'$(SdkCheckEnabled)' == 'true' and
+                     '$(DesignTimeBuild)' != 'true' and
+                     '$(NCrunch)' != '1'">
+    <SdkCheckTask
+      SdkVersion="$(_SdkCheck_SdkVersion)"
+      FrameworkReferences="@(ResolvedFrameworkReference)"
+      RuntimePacks="@(ResolvedRuntimePack)"
+      TreatAsError="$(SdkCheckTreatAsError)"
+      EolAsError="$(SdkCheckEolAsError)"
+      IncludeRuntime="$(SdkCheckIncludeRuntime)"
+      IncludeRuntimePacks="$(SdkCheckIncludeRuntimePacks)"
+      CacheHours="$(SdkCheckCacheHours)"
+      TimeoutSeconds="$(SdkCheckTimeoutSeconds)"
+      Offline="$(SdkCheckOffline)"
+      CacheDirectory="$(SdkCheckCacheDirectory)"
+      FeedOverride="$(SdkCheckFeedOverride)" />
+  </Target>
+</Project>

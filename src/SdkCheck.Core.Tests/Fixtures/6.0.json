@@ -1,0 +1,25 @@
+{
+  "channel-version": "6.0",
+  "latest-release": "6.0.36",
+  "latest-release-date": "2024-11-12",
+  "latest-runtime": "6.0.36",
+  "latest-sdk": "6.0.428",
+  "support-phase": "eol",
+  "release-type": "lts",
+  "eol-date": "2024-11-12",
+  "releases": [
+    {
+      "release-date": "2024-11-12",
+      "release-version": "6.0.36",
+      "security": false,
+      "cve-list": [],
+      "runtime": { "version": "6.0.36" },
+      "sdk": { "version": "6.0.428" },
+      "sdks": [
+        { "version": "6.0.428" }
+      ],
+      "aspnetcore-runtime": { "version": "6.0.36" },
+      "windowsdesktop": { "version": "6.0.36" }
+    }
+  ]
+}

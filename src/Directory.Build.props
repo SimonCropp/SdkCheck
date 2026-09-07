@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <!-- One NoWarn, because a second property of the same name replaces the first rather than
+         adding to it. -->
+    <NoWarn>CS1591;NU1608;NU1109;SC023;PolyfillTargetsForNuget</NoWarn>
+    <Version>0.1.0</Version>
+    <LangVersion>preview</LangVersion>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <PackageTags>sdk;cve;security;vulnerability;msbuild;dotnet;patch;eol</PackageTags>
+    <Description>Warns at build time when the .NET SDK or runtime in use has published CVEs, or is on an out-of-support channel. Data comes from the live dotnet release metadata feed, so no version baseline has to be maintained by hand.</Description>
+    <ResolveAssemblyReferencesSilent>true</ResolveAssemblyReferencesSilent>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
+    <!-- Audit the full transitive graph. With TreatWarningsAsErrors this fails the build on any
+         package advisory - which a package about CVEs has no business ignoring. -->
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <!-- No key.snk in the repo. Follows SponsorCheck: the task assembly is loaded by path from
+         tasks/, never by strong name, so signing buys nothing here. -->
+    <SignAssembly>false</SignAssembly>
+    <Verify_SponsorshipLicenseIgnored>true</Verify_SponsorshipLicenseIgnored>
+  </PropertyGroup>
+</Project>
