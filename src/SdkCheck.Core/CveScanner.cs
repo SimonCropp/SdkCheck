@@ -58,7 +58,7 @@ public static class CveScanner
                 channel.LatestRuntime);
         }
 
-        var (fixedIn, crossesFeatureBand) = SdkFix(component, channel, newerSecurity);
+        var (fixedIn, crossesFeatureBand, bandNewest) = SdkFix(component, channel, newerSecurity);
 
         return new(
             Diagnostics.SdkCve,
@@ -66,7 +66,8 @@ public static class CveScanner
             channel.ChannelVersion,
             cves,
             fixedIn,
-            crossesFeatureBand: crossesFeatureBand);
+            crossesFeatureBand: crossesFeatureBand,
+            bandNewest: bandNewest);
     }
 
     /// <summary>
@@ -77,11 +78,15 @@ public static class CveScanner
     /// not be able to make: a global.json pinned to 8.0.1xx does not roll to 8.0.4xx. The newest SDK
     /// on the component's own band is named instead - but only when it shipped in a release at least
     /// as new as the last security release counted above, because an older one carries some of the
-    /// fixes and not the rest, and naming it would report the problem as solved when it is not. A
-    /// band that has stopped shipping leaves the channel's latest as the only honest answer, and
-    /// <see cref="Finding.CrossesFeatureBand"/> then says so in the message.
+    /// fixes and not the rest, and naming it would report the problem as solved when it is not.
+    /// <para>
+    /// Both reasons the band cannot be held to end at the channel's latest, so what the search found
+    /// on the band comes back with it: <see cref="Finding.BandNewest"/> is the version that was there
+    /// and was too old, or null when the band has stopped shipping. The message states which, rather
+    /// than asserting the one that reads better.
+    /// </para>
     /// </remarks>
-    static (string? FixedIn, bool CrossesFeatureBand) SdkFix(
+    static (string? FixedIn, bool CrossesFeatureBand, string? BandNewest) SdkFix(
         Component component,
         ChannelReleases channel,
         List<Release> newerSecurity)
@@ -90,52 +95,59 @@ public static class CveScanner
         if (current == null)
         {
             // Not a version Version parses, so there is no band to hold the recommendation to.
-            return (channel.LatestSdk, false);
+            return (channel.LatestSdk, false, null);
         }
 
         var band = ReleaseVersion.FeatureBand(current);
         if (band == null)
         {
             // No patch component, so the same again.
-            return (channel.LatestSdk, false);
+            return (channel.LatestSdk, false, null);
         }
 
         // Never null: NewerSecurityReleases keeps only releases whose version parsed, and Scan
-        // returns before here unless one of them listed a CVE.
+        // returns before here unless one of them listed a CVE. It is also the channel's last
+        // security release, since every security release newer than the component's own is counted.
         var newestSecurity = newerSecurity.Max(_ => ReleaseVersion.ParseNumeric(_.ReleaseVersion))!;
 
-        var best = BandFixes(channel, current, band.Value, newestSecurity)
+        var onBand = BandSdks(channel, current, band.Value)
             .OrderByDescending(_ => _.Parsed)
+            .ToList();
+
+        var best = onBand
+            .Where(_ => _.Release >= newestSecurity)
             .Select(_ => _.Sdk)
             .FirstOrDefault();
 
         if (best != null)
         {
             // Selected on the component's own band, so it cannot be a band change.
-            return (best, false);
+            return (best, false, null);
         }
 
         var latestBand = ReleaseVersion.FeatureBand(channel.LatestSdk);
 
-        return (channel.LatestSdk, latestBand != null && latestBand != band);
+        return (
+            channel.LatestSdk,
+            latestBand != null && latestBand != band,
+            onBand.Select(_ => _.Sdk).FirstOrDefault());
     }
 
     /// <summary>
-    /// The stable SDKs on <paramref name="band"/> newer than <paramref name="current"/>, from the
-    /// releases at least as new as <paramref name="newestSecurity"/>. Each carries the version it
-    /// parsed to, so no version string here is parsed twice.
+    /// The stable SDKs on <paramref name="band"/> newer than <paramref name="current"/>, each with
+    /// the version it parsed to and the version of the release that shipped it. Nothing is dropped
+    /// for being too old here: the ones that are too old to carry every fix are what the message
+    /// reports when the band cannot be held to.
     /// </summary>
-    static IEnumerable<(string Sdk, Version Parsed)> BandFixes(
+    static IEnumerable<(string Sdk, Version Parsed, Version Release)> BandSdks(
         ChannelReleases channel,
         Version current,
-        int band,
-        Version newestSecurity)
+        int band)
     {
         foreach (var release in channel.Releases)
         {
             var releaseVersion = ReleaseVersion.ParseNumeric(release.ReleaseVersion);
-            if (releaseVersion == null ||
-                releaseVersion < newestSecurity)
+            if (releaseVersion == null)
             {
                 continue;
             }
@@ -154,7 +166,7 @@ public static class CveScanner
                     parsed > current &&
                     ReleaseVersion.FeatureBand(parsed) == band)
                 {
-                    yield return (sdk, parsed);
+                    yield return (sdk, parsed, releaseVersion);
                 }
             }
         }

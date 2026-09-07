@@ -79,7 +79,9 @@ public class CveScannerTests
 
     /// <summary>
     /// A band that has stopped shipping has nothing to move to on itself, so the channel's latest is
-    /// named and the message says the band changes.
+    /// named and the message says the band changes. Nothing shipped on the band, so there is no
+    /// version to report as too old - and 8.0.204 is on an earlier band than the 3xx being left,
+    /// which is why the message calls the band different rather than later.
     /// </summary>
     [Test]
     public async Task DiscontinuedFeatureBandFallsBackToTheChannelLatest()
@@ -92,12 +94,14 @@ public class CveScannerTests
 
         await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
         await Assert.That(finding.CrossesFeatureBand).IsTrue();
+        await Assert.That(finding.BandNewest).IsNull();
     }
 
     /// <summary>
     /// The newest SDK on the band is only the answer when it shipped in a release at least as new as
     /// the last security release counted. 8.0.105 came with 8.0.3, before the security release 8.0.4,
-    /// so naming it would report a fix that carries only some of the CVEs.
+    /// so naming it would report a fix that carries only some of the CVEs. It is reported as what the
+    /// band stops at instead, since a message claiming nothing shipped on the band would be false.
     /// </summary>
     [Test]
     public async Task StaleFeatureBandIsNotNamedAsTheFix()
@@ -109,6 +113,7 @@ public class CveScannerTests
 
         await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
         await Assert.That(finding.CrossesFeatureBand).IsTrue();
+        await Assert.That(finding.BandNewest).IsEqualTo("8.0.105");
     }
 
     /// <summary>
@@ -126,6 +131,7 @@ public class CveScannerTests
 
         await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
         await Assert.That(finding.CrossesFeatureBand).IsFalse();
+        await Assert.That(finding.BandNewest).IsNull();
     }
 
     /// <summary>
@@ -142,6 +148,7 @@ public class CveScannerTests
 
         await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
         await Assert.That(finding.CrossesFeatureBand).IsFalse();
+        await Assert.That(finding.BandNewest).IsNull();
     }
 
     [Test]

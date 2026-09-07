@@ -32,12 +32,23 @@ The version named stays on the feature band the SDK is already on. 8.0.100 is to
 newest is named only when it shipped in a release at least as new as the last security release
 counted, since an older one carries some of the fixes and not the rest.
 
-A band that has stopped shipping has nothing on it to move to. The channel's latest is named instead,
-and the message says the band changes:
+When the band cannot be held to, the channel's latest is named instead and the message says both that
+the band changes and why. Either nothing newer shipped on the band at all:
 
 ```
-Update to 8.0.204, on a later feature band: nothing newer shipped on this one.
+Update to 8.0.204, on a different feature band: nothing newer shipped on the band in use.
 ```
+
+or something did and it predates the last security release on the channel, so it carries part of the
+list and not the rest. That version is named too: it is a partial fix that keeps a `global.json` pin
+intact, and which of the two to take is the reader's call, not this package's.
+
+```
+Update to 8.0.204, on a different feature band: the band in use stops at 8.0.105, which predates the channel's last security release.
+```
+
+The band is described as different rather than later because it can be either. A component on a band
+the channel has since stopped shipping is sent to a latest that sits below it: 8.0.300 to 8.0.204.
 
 Every id is listed, never a subset. The count and the version to move to already state everything
 that drives the action, so the ids are there for audit traceability - and a truncated audit list is

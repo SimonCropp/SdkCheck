@@ -8,7 +8,8 @@ public class Finding(
     string? fixedIn = null,
     string? eolDate = null,
     string? detail = null,
-    bool crossesFeatureBand = false)
+    bool crossesFeatureBand = false,
+    string? bandNewest = null)
 {
     public string Code { get; } = code;
     public Component Component { get; } = component;
@@ -21,11 +22,21 @@ public class Finding(
     public string? FixedIn { get; } = fixedIn;
 
     /// <summary>
-    /// Whether <see cref="FixedIn"/> sits on a different SDK feature band than the component. True
-    /// only when the component's own band has stopped shipping, since a reader pinned to that band
-    /// has more to change than a version number.
+    /// Whether <see cref="FixedIn"/> sits on a different SDK feature band than the component, in
+    /// either direction: the channel's latest can be on an earlier band than a component sitting on
+    /// one the channel has since stopped shipping. A reader pinned to a band has more to change than
+    /// a version number, so the message says so, and <see cref="BandNewest"/> says why the band could
+    /// not be held to.
     /// </summary>
     public bool CrossesFeatureBand { get; } = crossesFeatureBand;
+
+    /// <summary>
+    /// The newest SDK on the component's own feature band, when one shipped and was still not named
+    /// as the fix: it came before the channel's last security release, so it carries some of the CVEs
+    /// listed and not the rest. Null when the band has stopped shipping, which is the other reason
+    /// <see cref="FixedIn"/> can leave the band.
+    /// </summary>
+    public string? BandNewest { get; } = bandNewest;
 
     public string? EolDate { get; } = eolDate;
 
@@ -55,15 +66,37 @@ public class Finding(
         var upgrade = "";
         if (FixedIn != null)
         {
-            upgrade = CrossesFeatureBand
-                ? $" Update to {FixedIn}, on a later feature band: nothing newer shipped on this one."
-                : $" Update to {FixedIn}.";
+            upgrade = $" Update to {FixedIn}{BandNote()}.";
         }
         return
             $"""
              {Component.Describe()} is affected by {Cves.Count} {(Cves.Count == 1 ? "CVE" : "CVEs")} published since it shipped, fixed in later .NET {Channel} releases.{upgrade}
              {ListCves()}
              """;
+    }
+
+    /// <summary>
+    /// Why the version named is not one on the component's own feature band, in the cases where it
+    /// is not. The two reasons end at the same version and read the same to anyone pinned to the
+    /// band, but they are not the same thing: a band that has stopped shipping offers nothing at all,
+    /// while one whose newest predates the last security release offers a version that carries part
+    /// of the list. Naming it leaves that choice with the reader.
+    /// </summary>
+    string BandNote()
+    {
+        var band = CrossesFeatureBand ? ", on a different feature band" : "";
+
+        if (BandNewest != null)
+        {
+            return $"{band}: the band in use stops at {BandNewest}, which predates the channel's last security release";
+        }
+
+        if (CrossesFeatureBand)
+        {
+            return $"{band}: nothing newer shipped on the band in use";
+        }
+
+        return "";
     }
 
     public string Message() =>
