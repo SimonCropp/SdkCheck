@@ -17,7 +17,10 @@ public class Finding(
     public IReadOnlyList<Cve> Cves { get; } = cves ?? [];
 
     /// <summary>
-    /// The latest SDK or runtime version on this channel - what to move to.
+    /// The version to move to. The channel's latest for a runtime, and for an SDK the newest on the
+    /// band in use when that carries every CVE listed - 8.0.100 is sent to 8.0.106 while the
+    /// channel's latest is 8.0.204, since a global.json pinned to the band cannot roll to it.
+    /// <see cref="CrossesFeatureBand"/> is set when the band could not be held to after all.
     /// </summary>
     public string? FixedIn { get; } = fixedIn;
 

@@ -98,9 +98,54 @@ public class ProgramTests
         await Assert.That(finding.GetProperty("eolDate").GetString()).IsEqualTo("2024-11-12");
     }
 
-    static (int Code, string Output) Run(Options options)
+    /// <summary>
+    /// The band fields ride along with the version, since the prose in "message" is the only other
+    /// place they appear and a report consumer should not have to parse it.
+    /// </summary>
+    [Test]
+    public async Task JsonCarriesTheFeatureBandFields()
     {
-        options.Feed = Fixtures;
+        // 8.0.106 removed from the security release 8.0.4, so the 1xx band stops at 8.0.105, which
+        // shipped before it - the case where the fix has to leave the band.
+        var channel = JsonNode.Parse(File.ReadAllText(Path.Combine(Fixtures, "8.0.json")))!;
+        var sdks = channel["releases"]!.AsArray()
+            .Single(_ => (string?) _!["release-version"] == "8.0.4")!["sdks"]!
+            .AsArray();
+        sdks.Remove(sdks.Single(_ => (string?) _!["version"] == "8.0.106"));
+
+        using var directory = new TempDirectory();
+        File.WriteAllText(Path.Combine(directory, "8.0.json"), channel.ToJsonString());
+
+        var (_, output) = Run(new() { Sdks = ["8.0.100"], Format = "json" }, directory);
+
+        using var document = JsonDocument.Parse(output);
+        var finding = document.RootElement.GetProperty("findings")[0];
+
+        await Assert.That(finding.GetProperty("fixedIn").GetString()).IsEqualTo("8.0.204");
+        await Assert.That(finding.GetProperty("crossesFeatureBand").GetBoolean()).IsTrue();
+        await Assert.That(finding.GetProperty("bandNewest").GetString()).IsEqualTo("8.0.105");
+    }
+
+    /// <summary>
+    /// Absent rather than null when there is nothing on the band to report, while the crossing
+    /// itself is always written.
+    /// </summary>
+    [Test]
+    public async Task JsonOmitsTheBandNewestWhenThereIsNone()
+    {
+        var (_, output) = Run(new() { Sdks = ["8.0.100"], Format = "json" });
+
+        using var document = JsonDocument.Parse(output);
+        var finding = document.RootElement.GetProperty("findings")[0];
+
+        await Assert.That(finding.GetProperty("fixedIn").GetString()).IsEqualTo("8.0.106");
+        await Assert.That(finding.GetProperty("crossesFeatureBand").GetBoolean()).IsFalse();
+        await Assert.That(finding.TryGetProperty("bandNewest", out _)).IsFalse();
+    }
+
+    static (int Code, string Output) Run(Options options, string? feed = null)
+    {
+        options.Feed = feed ?? Fixtures;
         ReleaseFeed.ResetMemo();
 
         var writer = new StringWriter();

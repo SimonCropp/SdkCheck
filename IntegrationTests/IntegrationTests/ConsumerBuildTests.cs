@@ -27,7 +27,9 @@ public class ConsumerBuildTests
     }
 
     /// <summary>
-    /// An out-of-support channel fails the build by default. Nothing else in this package does.
+    /// The SDK doing the build sitting on an out-of-support channel fails it by default, and is the
+    /// only thing in this package that fails a build. A target framework on a dead channel warns
+    /// instead: that one is a decision the project made, not a machine to be patched.
     /// </summary>
     [Test]
     public async Task EolChannelFailsTheBuild()

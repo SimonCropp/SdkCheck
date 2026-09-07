@@ -21,8 +21,10 @@ public enum FeedShape
 /// $(NETCoreSdkVersion) at all. Generating the feed around the real version keeps the production
 /// path intact and the assertions deterministic on any machine.
 ///
-/// No runtime versions are declared, so the targeting pack the consumer resolves matches nothing and
-/// the runtime check stays quiet. That leaves each test asserting one thing.
+/// No runtime versions are declared, so a targeting pack the consumer resolves matches no release
+/// and nothing is published against it. End of support is the one finding that reaches a runtime
+/// anyway, since it is tested without reference to a version - which is what the second channel
+/// below exists to reach. That leaves each test asserting one thing.
 /// </remarks>
 public static class FeedBuilder
 {
