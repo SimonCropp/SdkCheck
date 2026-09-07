@@ -1,6 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <!-- Written across several lines deliberately. Splitting $(TargetFrameworks) without trimming
+         leaves the newline and indentation on the first entry, which matched no inner build and
+         silently disabled the SDK check for the whole project. -->
+    <TargetFrameworks>
+      net8.0;
+      net10.0
+    </TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SdkCheck" Version="$(SdkCheckVersion)" PrivateAssets="all" />

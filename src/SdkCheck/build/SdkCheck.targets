@@ -18,20 +18,6 @@
     <_SdkCheck_Assembly>$(_SdkCheck_TasksDir)netstandard2.0\SdkCheck.dll</_SdkCheck_Assembly>
 
     <SdkCheckEnabled Condition="'$(SdkCheckEnabled)' == ''">true</SdkCheckEnabled>
-
-    <!--
-      The SDK doing the build is the same whichever target framework is being built, so it is
-      checked on the first one only. The runtime check below still runs for every target framework,
-      because that one genuinely differs per TFM.
-
-      The task also deduplicates in-process, but that cannot be relied on here: MSBuild farms inner
-      builds out to separate nodes, and a registered task object lives in one node's registry.
-    -->
-    <_SdkCheck_SdkVersion>$(NETCoreSdkVersion)</_SdkCheck_SdkVersion>
-    <_SdkCheck_SdkVersion
-      Condition="'$(TargetFrameworks)' != '' and
-                 '$(TargetFramework)' != $([MSBuild]::ValueOrDefault('$(TargetFrameworks)', '').Split(';')[0])"
-    ></_SdkCheck_SdkVersion>
   </PropertyGroup>
 
   <UsingTask TaskName="SdkCheckTask"
@@ -55,6 +41,37 @@
           Condition="'$(SdkCheckEnabled)' == 'true' and
                      '$(DesignTimeBuild)' != 'true' and
                      '$(NCrunch)' != '1'">
+    <!--
+      The SDK doing the build is the same whichever target framework is being built, so it is
+      checked on the first one only. The runtime check below still runs for every target framework,
+      because that one genuinely differs per TFM.
+
+      The task also deduplicates in-process, but that cannot be relied on here: MSBuild farms inner
+      builds out to separate nodes, and a registered task object lives in one node's registry.
+
+      $(TargetFrameworks) is read through an item rather than split directly, and that is why this
+      sits inside the target: a property outside one is evaluated before any item exists.
+
+      The property is routinely written across several lines, and String.Split does not trim, so
+      splitting it raw leaves the newline and indentation on the first entry. That entry then
+      matches no inner build's $(TargetFramework), which blanked the SDK version for every one of
+      them and left the check silently doing nothing for the whole project. Item creation trims each
+      entry and drops empty ones, which is why the SDK's own reading of the same property never saw
+      this.
+    -->
+    <ItemGroup Condition="'$(TargetFrameworks)' != ''">
+      <_SdkCheck_TargetFramework Include="$(TargetFrameworks)" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_SdkCheck_TargetFrameworks>@(_SdkCheck_TargetFramework)</_SdkCheck_TargetFrameworks>
+      <_SdkCheck_SdkVersion>$(NETCoreSdkVersion)</_SdkCheck_SdkVersion>
+      <_SdkCheck_SdkVersion
+        Condition="'$(_SdkCheck_TargetFrameworks)' != '' and
+                   '$(TargetFramework)' != $([MSBuild]::ValueOrDefault('$(_SdkCheck_TargetFrameworks)', '').Split(';')[0])"
+      ></_SdkCheck_SdkVersion>
+    </PropertyGroup>
+
     <SdkCheckTask
       SdkVersion="$(_SdkCheck_SdkVersion)"
       IncludeRuntime="false"
