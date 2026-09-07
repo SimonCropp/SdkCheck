@@ -141,15 +141,19 @@ public class ConsumerBuildTests
     {
         var result = await Build("Consumer.Basic", FeedShape.Vulnerable, verbosity: "diagnostic");
 
+        // Separators normalized rather than matched as-is: MSBuild reports the path the way the
+        // platform writes it, so the same assertion sees tasks\net10.0 on Windows and tasks/net10.0
+        // on Linux.
         var loaded = result.Combined
             .Split('\n')
+            .Select(_ => _.Replace('\\', '/'))
             .Where(_ => _.Contains("SdkCheckTask", StringComparison.Ordinal) &&
-                        _.Contains("tasks", StringComparison.Ordinal))
+                        _.Contains("tasks/", StringComparison.Ordinal))
             .ToList();
 
         await Assert.That(loaded).IsNotEmpty()
             .Because("no line reported which assembly SdkCheckTask was loaded from");
-        await Assert.That(loaded.Any(_ => _.Contains(@"tasks\net10.0\SdkCheck.dll", StringComparison.OrdinalIgnoreCase)))
+        await Assert.That(loaded.Any(_ => _.Contains("tasks/net10.0/SdkCheck.dll", StringComparison.OrdinalIgnoreCase)))
             .IsTrue()
             .Because(string.Join(Environment.NewLine, loaded));
     }
