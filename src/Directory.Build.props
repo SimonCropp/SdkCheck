@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <PropertyGroup>
-    <!-- One NoWarn, because a second property of the same name replaces the first rather than
-         adding to it. -->
     <NoWarn>CS1591;NU1608;NU1109;SC023;PolyfillTargetsForNuget</NoWarn>
     <Version>0.2.0</Version>
     <LangVersion>preview</LangVersion>
@@ -13,11 +11,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
-    <!-- Audit the full transitive graph. With TreatWarningsAsErrors this fails the build on any
-         package advisory - which a package about CVEs has no business ignoring. -->
     <NuGetAuditMode>all</NuGetAuditMode>
-    <!-- No key.snk in the repo. Follows SponsorCheck: the task assembly is loaded by path from
-         tasks/, never by strong name, so signing buys nothing here. -->
     <SignAssembly>false</SignAssembly>
     <Verify_SponsorshipLicenseIgnored>true</Verify_SponsorshipLicenseIgnored>
   </PropertyGroup>
