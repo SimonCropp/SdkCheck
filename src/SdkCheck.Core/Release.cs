@@ -37,20 +37,23 @@ public class Release
     [JsonPropertyName("windowsdesktop")]
     public ComponentVersion? WindowsDesktop { get; set; }
 
-    public bool ShipsSdk(string version)
-    {
-        if (Sdk != null &&
-            string.Equals(Sdk.Version, version, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return Sdks.Any(_ => string.Equals(_.Version, version, StringComparison.OrdinalIgnoreCase));
-    }
+    /// <summary>
+    /// Whether this release shipped the given SDK, on any band.
+    /// </summary>
+    /// <remarks>
+    /// Walking <see cref="SdkVersions"/> rather than <see cref="Sdk"/> and <see cref="Sdks"/> again
+    /// keeps one definition of what this release shipped. The one input the two forms answer
+    /// differently is a blank version, which a malformed feed can carry in either member: it matches
+    /// nothing here, where a second walk would have it match every release whose "sdk" has no version
+    /// in it. Callers drop blank versions before this, so nothing real reaches the difference.
+    /// </remarks>
+    public bool ShipsSdk(string version) =>
+        SdkVersions().Any(_ => string.Equals(_, version, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Every SDK version this release shipped, newest band first. Duplicates are possible, since
-    /// <see cref="Sdk"/> is also the first entry of <see cref="Sdks"/> in every real feed.
+    /// Every SDK version this release shipped, newest band first, skipping any member the feed left
+    /// without a version. Duplicates are possible, since <see cref="Sdk"/> is also the first entry of
+    /// <see cref="Sdks"/> in every real feed.
     /// </summary>
     public IEnumerable<string> SdkVersions()
     {
