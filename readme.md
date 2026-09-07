@@ -11,13 +11,12 @@ Warns at build time when the .NET SDK or runtime in use has published CVEs, or s
 
 ## Why
 
-`NuGetAudit` (NU1901-NU1904) covers NuGet packages. The .NET 11 SDK covers itself, behind an opt-in property. Nothing covers the shared framework the output runs on.
+A CVE in the .NET SDK or runtime is fixed in the next patch release. The SDK a build runs on is whatever was installed on the machine, baked into the CI image or pinned in `global.json`, and it picks the runtime the output is built against. A project keeps compiling, testing and shipping on a version with published CVEs until someone notices.
 
-The usual substitutes are a version someone typed once, or a check that never mentions a CVE:
+`NuGetAudit` (NU1901-NU1904) covers NuGet packages. `CheckSdkVulnerabilities` covers the SDK, on .NET 11 and later, behind an opt-in property. That leaves the runtime, where most .NET CVEs land, and every SDK before 11. The usual substitutes never name a CVE:
 
-- A `global.json` version floor stops being a floor the moment a CVE is announced against the pinned version.
-- An MSBuild comparison against a hand-written baseline has the same problem, plus someone has to remember to raise it.
-- `dotnet sdk check` is live, but only knows support phase and latest-patch-available. It never mentions a CVE, and it exits 0 either way.
+- `dotnet sdk check` reports support phase and whether a newer patch exists, for whatever is installed rather than what a build used, and exits 0 either way.
+- A `global.json` floor or a hand-written version baseline is a version someone typed once. It was right that day, and the next security release makes it wrong until someone remembers to raise it.
 
 SdkCheck compares the SDK and runtime actually in use against Microsoft's live [release metadata](https://builds.dotnet.microsoft.com/dotnet/release-metadata/releases-index.json), which carries a `security` flag and a `cve-list` for every release. A CVE published tomorrow is reported tomorrow, with nothing to bump.
 
@@ -65,8 +64,6 @@ The package is a `DevelopmentDependency` with no dependencies of its own. It con
 | Self-contained runtime packs | `@(ResolvedRuntimePack)`, for self-contained and AOT publishes |
 | End of support | the channel's support phase and end-of-support date |
 
-Most .NET CVEs land in the runtime rather than the SDK, which is why checking only the SDK misses the bigger half.
-
 
 ## Versus the built-in SDK check
 
@@ -83,9 +80,7 @@ Most .NET CVEs land in the runtime rather than the SDK, which is why checking on
 | SDK 8, 9 and 10 | yes | - |
 | Away from a build | `sdkcheck` | - |
 
-The gap is the runtime. NETSDK1238 reports the SDK that ran the build, and says nothing about the
-shared framework the output was compiled against or the runtime pack a self-contained publish
-embeds.
+The gap is the runtime. NETSDK1238 reports the SDK that ran the build, and says nothing about the shared framework the output was compiled against or the runtime pack a self-contained publish embeds.
 
 
 ## Diagnostics
