@@ -4,7 +4,7 @@
     <!-- One NoWarn, because a second property of the same name replaces the first rather than
          adding to it. -->
     <NoWarn>CS1591;NU1608;NU1109;SC023;PolyfillTargetsForNuget</NoWarn>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <LangVersion>preview</LangVersion>
     <AssemblyVersion>1.0.0</AssemblyVersion>
     <PackageTags>sdk;cve;security;vulnerability;msbuild;dotnet;patch;eol</PackageTags>
