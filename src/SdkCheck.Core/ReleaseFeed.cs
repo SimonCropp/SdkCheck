@@ -12,25 +12,39 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
     // project - the disk cache alone would still re-read and re-parse for every project.
     static readonly ConcurrentDictionary<string, Memo> memos = new(StringComparer.Ordinal);
 
-    public FeedResult Get(string channel)
+    public FeedResult Get(string channel) =>
+        Get(channel, DateTime.UtcNow);
+
+    /// <summary>
+    /// Takes the current time so a test can step past a TTL rather than sleep through it, and can
+    /// therefore assert the shipped defaults instead of TTLs it set itself.
+    /// </summary>
+    public FeedResult Get(string channel, DateTime utcNow)
     {
         var key = $"{options.OverrideDirectory}|{CacheDirectory()}|{options.BaseUrl}|{channel}";
         if (memos.TryGetValue(key, out var memo) &&
-            memo.IsFresh(DateTime.UtcNow))
+            memo.IsFresh(utcNow, Ttl(memo.Result)))
         {
             return memo.Result;
         }
 
-        var result = Resolve(channel);
+        var result = Resolve(channel, utcNow);
+        memos[key] = new(utcNow, result);
+        return result;
+    }
 
+    /// <summary>
+    /// Read from the caller's own options at every use rather than frozen into the entry when it was
+    /// written. The memo is process wide and its key does not include the TTLs, so whichever project
+    /// resolved a channel first would otherwise set how long every project after it is held to -
+    /// leaving one asking for a shorter SdkCheckCacheHours ignored for the entry's lifetime.
+    /// </summary>
+    TimeSpan Ttl(FeedResult result) =>
         // A fetch that failed is held briefly whether or not an expired cache stood in for it. The
         // stale channel is worth reporting against, but it is not a fresh read: holding it for the
         // cache TTL would mean one dropped connection pins the node to month old data all day, and
         // the disk cache it came from never gets rewritten either.
-        var ttl = result.Channel == null || result.FetchFailed ? options.FailureTtl : options.CacheTtl;
-        memos[key] = new(DateTime.UtcNow, result, ttl);
-        return result;
-    }
+        result.Channel == null || result.FetchFailed ? options.FailureTtl : options.CacheTtl;
 
     /// <summary>
     /// Drops the process wide memo. For tests, which would otherwise see one another's feeds.
@@ -38,7 +52,7 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
     public static void ResetMemo() =>
         memos.Clear();
 
-    FeedResult Resolve(string channel)
+    FeedResult Resolve(string channel, DateTime utcNow)
     {
         if (options.OverrideDirectory != null)
         {
@@ -47,7 +61,7 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
 
         var cached = ReadCache(channel);
         if (cached != null &&
-            DateTime.UtcNow - cached.Fetched < options.CacheTtl &&
+            utcNow - cached.Fetched < options.CacheTtl &&
             cached.Channel != null)
         {
             return new(cached.Channel);
@@ -67,7 +81,7 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
         try
         {
             var fetched = Fetch(channel);
-            WriteCache(channel, fetched);
+            WriteCache(channel, fetched, utcNow);
             return new(fetched);
         }
         catch (Exception exception)
@@ -166,7 +180,7 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
         }
     }
 
-    void WriteCache(string channel, ChannelReleases channelReleases)
+    void WriteCache(string channel, ChannelReleases channelReleases, DateTime utcNow)
     {
         var path = CachePath(channel);
         var temp = $"{path}.{Guid.NewGuid():N}.tmp";
@@ -175,7 +189,7 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
             Directory.CreateDirectory(CacheDirectory());
             var entry = new CacheEntry
             {
-                Fetched = DateTime.UtcNow,
+                Fetched = utcNow,
                 Channel = channelReleases
             };
             File.WriteAllText(temp, JsonSerializer.Serialize(entry, FeedJsonContext.Default.CacheEntry));

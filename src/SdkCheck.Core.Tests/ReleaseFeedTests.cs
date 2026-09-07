@@ -116,12 +116,12 @@ public class ReleaseFeedTests
 
         var feed = Feed(new() { OverrideDirectory = directory });
 
-        await Assert.That(feed.Get("8.0").Channel).IsNotNull();
+        await Assert.That(feed.Get("8.0", resolved).Channel).IsNotNull();
 
         File.Delete(path);
 
         // Memoised, so the now missing file is never looked for.
-        await Assert.That(feed.Get("8.0").Channel).IsNotNull();
+        await Assert.That(feed.Get("8.0", resolved.AddHours(12)).Channel).IsNotNull();
     }
 
     /// <summary>
@@ -133,18 +133,13 @@ public class ReleaseFeedTests
     public async Task FailureIsNotHeldForTheCacheTtl()
     {
         using var directory = new TempDirectory();
-        var feed = Feed(
-            new()
-            {
-                OverrideDirectory = directory,
-                FailureTtl = TimeSpan.Zero
-            });
+        var feed = Feed(new() { OverrideDirectory = directory });
 
-        await Assert.That(feed.Get("8.0").Channel).IsNull();
+        await Assert.That(feed.Get("8.0", resolved).Channel).IsNull();
 
         File.Copy(Path.Combine(Feeds.Directory, "8.0.json"), Path.Combine(directory, "8.0.json"));
 
-        await Assert.That(feed.Get("8.0").Channel).IsNotNull();
+        await Assert.That(feed.Get("8.0", retried).Channel).IsNotNull();
     }
 
     /// <summary>
@@ -156,29 +151,34 @@ public class ReleaseFeedTests
     public async Task StaleFallbackIsNotHeldForTheCacheTtl()
     {
         using var cache = new TempDirectory();
-        WriteCache(cache, "8.0", DateTime.UtcNow.AddDays(-30));
+        WriteCache(cache, "8.0", resolved.AddDays(-30));
 
         var feed = Feed(
             new()
             {
                 CacheDirectory = cache,
                 BaseUrl = unreachable,
-                Timeout = TimeSpan.FromSeconds(1),
-                FailureTtl = TimeSpan.Zero
+                Timeout = TimeSpan.FromSeconds(1)
             });
 
         // Expired, and the feed cannot be reached, so the fallback is what comes back.
-        await Assert.That(feed.Get("8.0").Channel!.LatestSdk).IsEqualTo("8.0.204");
+        await Assert.That(feed.Get("8.0", resolved).Channel!.LatestSdk).IsEqualTo("8.0.204");
 
         // The network coming back, stood in for by a fresh cache holding a different channel: the
-        // memo has to be past by now for it to be seen at all.
-        WriteCache(cache, "8.0", DateTime.UtcNow, "6.0");
+        // memo has to be past by then for it to be seen at all.
+        WriteCache(cache, "8.0", retried, "6.0");
 
-        await Assert.That(feed.Get("8.0").Channel!.LatestSdk).IsEqualTo("6.0.428");
+        await Assert.That(feed.Get("8.0", retried).Channel!.LatestSdk).IsEqualTo("6.0.428");
     }
 
     // Nothing listens on port 1, so a fetch fails there without the network being involved.
     const string unreachable = "http://127.0.0.1:1";
+
+    // An hour on: past the default FailureTtl and far short of the default CacheTtl, so what these
+    // tests see is the shipped policy rather than TTLs they set for themselves. Stepping the clock
+    // rather than setting the TTLs is what keeps that distinction testable.
+    static readonly DateTime resolved = new(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc);
+    static readonly DateTime retried = resolved.AddHours(1);
 
     static ReleaseFeed Feed(FeedOptions options)
     {
