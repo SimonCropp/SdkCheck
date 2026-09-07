@@ -1,5 +1,3 @@
-namespace testing;
-
 public class FindingTests
 {
     static readonly Component sdk = new(ComponentKind.Sdk, "8.0.100");

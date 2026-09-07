@@ -25,7 +25,7 @@ public static class Program
                 return ExitCode.Failed;
             }
 
-            var log = options.Verbose ? error.WriteLine : (Action<string>?) null;
+            Action<string>? log = options.Verbose ? error.WriteLine : null;
             var checker = new SdkChecker(BuildOptions(options), log);
             var findings = checker.Check(components);
 
@@ -86,9 +86,11 @@ public static class Program
             return explicitly;
         }
 
-        return DotnetListParser.ParseSdks(Dotnet.Run("--list-sdks"))
-            .Concat(DotnetListParser.ParseRuntimes(Dotnet.Run("--list-runtimes")))
-            .ToList();
+        return
+        [
+            .. DotnetListParser.ParseSdks(Dotnet.Run("--list-sdks")),
+            .. DotnetListParser.ParseRuntimes(Dotnet.Run("--list-runtimes"))
+        ];
     }
 
     static FeedOptions BuildOptions(Options options)
@@ -113,6 +115,13 @@ public static class Program
         return feed;
     }
 
-    static string? Blank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
+    static string? Blank(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Trim();
+    }
 }

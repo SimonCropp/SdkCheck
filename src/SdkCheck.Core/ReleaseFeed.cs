@@ -105,13 +105,13 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
         var url = $"{BaseUrl}/{channel}/releases.json";
         log?.Invoke($"SdkCheck: fetching {url}");
 
-        using var cancellation = new CancellationTokenSource(options.Timeout);
+        using var cancellation = new CancelSource(options.Timeout);
         using var response = HttpClientFactory.Get()
             .GetAsync(url, cancellation.Token)
             .GetAwaiter()
             .GetResult();
         response.EnsureSuccessStatusCode();
-        var json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        var json = response.Content.ReadAsStringAsync(cancellation.Token).GetAwaiter().GetResult();
         return Deserialize(json);
     }
 

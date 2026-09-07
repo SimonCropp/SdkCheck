@@ -1,5 +1,3 @@
-namespace testing;
-
 public class SdkCheckerTests
 {
     static readonly DateTime now = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -7,8 +5,8 @@ public class SdkCheckerTests
     [Test]
     public Task SdkAndRuntimeTogether() =>
         Verify(Check(
-            new Component(ComponentKind.Sdk, "8.0.100"),
-            new Component(ComponentKind.Runtime, "8.0.2")))
+                new Component(ComponentKind.Sdk, "8.0.100"),
+                new Component(ComponentKind.Runtime, "8.0.2")))
             .Snapshot(
                 """
                 [
@@ -54,14 +52,19 @@ public class SdkCheckerTests
     {
         using var cache = new TempDirectory();
         ReleaseFeed.ResetMemo();
-        var checker = new SdkChecker(new() { CacheDirectory = cache, Offline = true });
+        var checker = new SdkChecker(new()
+        {
+            CacheDirectory = cache,
+            Offline = true
+        });
 
         var findings = checker.Check(
-        [
-            new Component(ComponentKind.Sdk, "8.0.100"),
-            new Component(ComponentKind.Runtime, "8.0.2"),
-            new Component(ComponentKind.Runtime, "8.0.0")
-        ], now);
+            [
+                new(ComponentKind.Sdk, "8.0.100"),
+                new(ComponentKind.Runtime, "8.0.2"),
+                new(ComponentKind.Runtime, "8.0.0")
+            ],
+            now);
 
         await Assert.That(findings).HasSingleItem();
         await Assert.That(findings[0].Code).IsEqualTo(Diagnostics.Unavailable);
@@ -80,7 +83,10 @@ public class SdkCheckerTests
     static IReadOnlyList<string> Check(params Component[] components)
     {
         ReleaseFeed.ResetMemo();
-        var checker = new SdkChecker(new() { OverrideDirectory = Feeds.Directory });
+        var checker = new SdkChecker(new()
+        {
+            OverrideDirectory = Feeds.Directory
+        });
         return checker.Check(components, now)
             .Select(_ => $"{_.Code}: {_.Body()}")
             .ToList();

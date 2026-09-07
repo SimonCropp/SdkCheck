@@ -1,6 +1,13 @@
 namespace SdkCheck;
 
-public class Finding
+public class Finding(
+    string code,
+    Component component,
+    string channel,
+    IReadOnlyList<Cve>? cves = null,
+    string? fixedIn = null,
+    string? eolDate = null,
+    string? detail = null)
 {
     /// <summary>
     /// How many CVE ids to name inline before summarising the rest. A single .NET 8 SDK that is two
@@ -8,40 +15,22 @@ public class Finding
     /// </summary>
     public const int MaxListedCves = 10;
 
-    public Finding(
-        string code,
-        Component component,
-        string channel,
-        IReadOnlyList<Cve>? cves = null,
-        string? fixedIn = null,
-        string? eolDate = null,
-        string? detail = null)
-    {
-        Code = code;
-        Component = component;
-        Channel = channel;
-        Cves = cves ?? [];
-        FixedIn = fixedIn;
-        EolDate = eolDate;
-        Detail = detail;
-    }
-
-    public string Code { get; }
-    public Component Component { get; }
-    public string Channel { get; }
-    public IReadOnlyList<Cve> Cves { get; }
+    public string Code { get; } = code;
+    public Component Component { get; } = component;
+    public string Channel { get; } = channel;
+    public IReadOnlyList<Cve> Cves { get; } = cves ?? [];
 
     /// <summary>
     /// The latest SDK or runtime version on this channel - what to move to.
     /// </summary>
-    public string? FixedIn { get; }
+    public string? FixedIn { get; } = fixedIn;
 
-    public string? EolDate { get; }
+    public string? EolDate { get; } = eolDate;
 
     /// <summary>
     /// Free text for <see cref="Diagnostics.Unavailable"/>: why the feed could not be read.
     /// </summary>
-    public string? Detail { get; }
+    public string? Detail { get; } = detail;
 
     public string Body()
     {

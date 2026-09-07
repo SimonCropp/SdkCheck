@@ -1,5 +1,3 @@
-namespace testing;
-
 public class ReleaseVersionTests
 {
     [Test]
@@ -24,7 +22,7 @@ public class ReleaseVersionTests
     public async Task PrereleaseDoesNotThrow()
     {
         await Assert.That(() => Version.Parse("8.0.0-rc.2")).Throws<FormatException>();
-        await Assert.That(ReleaseVersion.ParseNumeric("8.0.0-rc.2")).IsEqualTo(new Version(8, 0, 0));
+        await Assert.That(ReleaseVersion.ParseNumeric("8.0.0-rc.2")).IsEqualTo(new(8, 0, 0));
     }
 
     [Test]

@@ -1,5 +1,3 @@
-namespace testing;
-
 public class CveScannerTests
 {
     static readonly DateTime now = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);

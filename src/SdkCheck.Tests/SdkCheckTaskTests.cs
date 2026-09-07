@@ -1,5 +1,3 @@
-namespace testing;
-
 public class SdkCheckTaskTests
 {
     static string Fixtures => Path.Combine(AppContext.BaseDirectory, "Fixtures");

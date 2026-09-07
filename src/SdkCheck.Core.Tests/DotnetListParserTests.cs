@@ -1,19 +1,19 @@
-namespace testing;
-
 public class DotnetListParserTests
 {
-    const string sdks = """
-                        8.0.424 [C:\Program Files\dotnet\sdk]
-                        9.0.317 [C:\Program Files\dotnet\sdk]
-                        10.0.400 [C:\Program Files\dotnet\sdk]
-                        11.0.100-rc.1.26431.118 [C:\Program Files\dotnet\sdk]
-                        """;
+    const string sdks =
+        """
+        8.0.424 [C:\Program Files\dotnet\sdk]
+        9.0.317 [C:\Program Files\dotnet\sdk]
+        10.0.400 [C:\Program Files\dotnet\sdk]
+        11.0.100-rc.1.26431.118 [C:\Program Files\dotnet\sdk]
+        """;
 
-    const string runtimes = """
-                            Microsoft.AspNetCore.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
-                            Microsoft.NETCore.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
-                            Microsoft.WindowsDesktop.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
-                            """;
+    const string runtimes =
+        """
+        Microsoft.AspNetCore.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+        Microsoft.NETCore.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+        Microsoft.WindowsDesktop.App 8.0.30 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
+        """;
 
     [Test]
     public Task Sdks() =>

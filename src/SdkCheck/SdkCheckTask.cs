@@ -12,7 +12,7 @@ public class SdkCheckTask :
     Task,
     ICancelableTask
 {
-    readonly CancellationTokenSource cancellation = new();
+    readonly CancelSource cancellation = new();
 
     /// <summary>
     /// $(NETCoreSdkVersion) - the SDK running this build. Empty on all but the first target

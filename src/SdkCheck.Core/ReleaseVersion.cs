@@ -39,6 +39,7 @@ public static class ReleaseVersion
             return null;
         }
 
+        // ReSharper disable once RedundantSuppressNullableWarningExpression
         return Version.TryParse(Numeric(version!), out var parsed) ? parsed : null;
     }
 

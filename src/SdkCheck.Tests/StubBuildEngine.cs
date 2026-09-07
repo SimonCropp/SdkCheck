@@ -1,5 +1,3 @@
-namespace testing;
-
 public sealed class StubBuildEngine : IBuildEngine
 {
     public List<BuildErrorEventArgs> Errors { get; } = [];

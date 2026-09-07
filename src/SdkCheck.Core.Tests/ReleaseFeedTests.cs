@@ -1,5 +1,3 @@
-namespace testing;
-
 public class ReleaseFeedTests
 {
     [Test]

@@ -1,5 +1,3 @@
-namespace testing;
-
 public static class Feeds
 {
     public static string Directory => Path.Combine(AppContext.BaseDirectory, "Fixtures");
