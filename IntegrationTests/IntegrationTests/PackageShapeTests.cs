@@ -72,7 +72,12 @@ public class PackageShapeTests
             .Select(_ => _.FullName)
             .Where(_ => !_.StartsWith("_rels/", StringComparison.Ordinal) &&
                         !_.StartsWith("package/", StringComparison.Ordinal) &&
-                        !_.StartsWith("[Content_Types]", StringComparison.Ordinal))
+                        !_.StartsWith("[Content_Types]", StringComparison.Ordinal) &&
+                        // ProjectDefaults sets GenerateSBOM, and Microsoft.Sbom.Targets is only
+                        // referenced when $(CI) is true - so _manifest/ exists in a CI package and
+                        // never in a local one. Asserting on it would make this test pass in
+                        // exactly one of the two places it runs.
+                        !_.StartsWith("_manifest/", StringComparison.Ordinal))
             .OrderBy(_ => _, StringComparer.Ordinal)
             .ToList();
     }
