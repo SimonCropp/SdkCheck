@@ -12,7 +12,8 @@ has reached end of support.
 
 ## Why
 
-`NuGetAudit` (NU1901-NU1904) covers NuGet packages. Nothing covers the SDK or the shared framework.
+`NuGetAudit` (NU1901-NU1904) covers NuGet packages. The .NET 11 SDK covers itself, behind an opt-in
+property. Nothing covers the shared framework the output runs on.
 
 The usual substitutes all encode a constant that was correct the day it was written:
 
@@ -71,6 +72,30 @@ compile references, build output, or a consumer's dependency graph.
 
 Most .NET CVEs land in the runtime rather than the SDK, which is why checking only the SDK misses the
 bigger half.
+
+
+## Versus the built-in SDK check
+
+.NET 11 Preview 5 added `CheckSdkVulnerabilities`, an opt-in property that warns when the SDK running
+the build has published CVEs ([NETSDK1238](https://learn.microsoft.com/dotnet/core/tools/sdk-errors/netsdk1238)),
+has reached end of support (NETSDK1239), or sits on a feature band with no newer release
+(NETSDK1240). It reads the same Microsoft release metadata. For the SDK, on .NET 11, it needs no
+package reference and is the better answer.
+
+| | SdkCheck | The .NET SDK |
+|---|---|---|
+| SDK CVEs | SdkCheck001 | NETSDK1238, .NET 11+, opt-in |
+| SDK channel out of support | SdkCheck002 | NETSDK1239, .NET 11+, opt-in |
+| Feature band no longer shipping | named in the SdkCheck001 fix | NETSDK1240, .NET 11+, opt-in |
+| Target framework out of support | SdkCheck002 | NETSDK1138, on by default |
+| Runtime CVEs | SdkCheck003 | - |
+| Runtime pack CVEs, self-contained and AOT | SdkCheck003 | - |
+| SDK 8, 9 and 10 | yes | - |
+| Away from a build | `sdkcheck` | - |
+
+The gap is the runtime. NETSDK1238 reports the SDK that ran the build, and says nothing about the
+shared framework the output was compiled against or the runtime pack a self-contained publish
+embeds.
 
 
 ## Diagnostics
