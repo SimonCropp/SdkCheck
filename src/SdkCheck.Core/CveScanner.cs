@@ -58,7 +58,7 @@ public static class CveScanner
                 channel.LatestRuntime);
         }
 
-        var fixedIn = SdkFix(component, channel, newerSecurity);
+        var (fixedIn, crossesFeatureBand) = SdkFix(component, channel, newerSecurity);
 
         return new(
             Diagnostics.SdkCve,
@@ -66,7 +66,7 @@ public static class CveScanner
             channel.ChannelVersion,
             cves,
             fixedIn,
-            crossesFeatureBand: CrossesFeatureBand(component.Version, fixedIn));
+            crossesFeatureBand: crossesFeatureBand);
     }
 
     /// <summary>
@@ -81,81 +81,83 @@ public static class CveScanner
     /// band that has stopped shipping leaves the channel's latest as the only honest answer, and
     /// <see cref="Finding.CrossesFeatureBand"/> then says so in the message.
     /// </remarks>
-    static string? SdkFix(Component component, ChannelReleases channel, List<Release> newerSecurity)
+    static (string? FixedIn, bool CrossesFeatureBand) SdkFix(
+        Component component,
+        ChannelReleases channel,
+        List<Release> newerSecurity)
     {
-        var band = ReleaseVersion.FeatureBand(component.Version);
         var current = ReleaseVersion.ParseNumeric(component.Version);
-        if (band == null ||
-            current == null)
+        if (current == null)
         {
-            return channel.LatestSdk;
+            // Not a version Version parses, so there is no band to hold the recommendation to.
+            return (channel.LatestSdk, false);
         }
 
-        var newestSecurity = Newest(newerSecurity.Select(_ => _.ReleaseVersion));
+        var band = ReleaseVersion.FeatureBand(current);
+        if (band == null)
+        {
+            // No patch component, so the same again.
+            return (channel.LatestSdk, false);
+        }
 
-        string? best = null;
-        Version? bestParsed = null;
+        // Never null: NewerSecurityReleases keeps only releases whose version parsed, and Scan
+        // returns before here unless one of them listed a CVE.
+        var newestSecurity = newerSecurity.Max(_ => ReleaseVersion.ParseNumeric(_.ReleaseVersion))!;
 
+        var best = BandFixes(channel, current, band.Value, newestSecurity)
+            .OrderByDescending(_ => _.Parsed)
+            .Select(_ => _.Sdk)
+            .FirstOrDefault();
+
+        if (best != null)
+        {
+            // Selected on the component's own band, so it cannot be a band change.
+            return (best, false);
+        }
+
+        var latestBand = ReleaseVersion.FeatureBand(channel.LatestSdk);
+
+        return (channel.LatestSdk, latestBand != null && latestBand != band);
+    }
+
+    /// <summary>
+    /// The stable SDKs on <paramref name="band"/> newer than <paramref name="current"/>, from the
+    /// releases at least as new as <paramref name="newestSecurity"/>. Each carries the version it
+    /// parsed to, so no version string here is parsed twice.
+    /// </summary>
+    static IEnumerable<(string Sdk, Version Parsed)> BandFixes(
+        ChannelReleases channel,
+        Version current,
+        int band,
+        Version newestSecurity)
+    {
         foreach (var release in channel.Releases)
         {
             var releaseVersion = ReleaseVersion.ParseNumeric(release.ReleaseVersion);
             if (releaseVersion == null ||
-                (newestSecurity != null && releaseVersion < newestSecurity))
+                releaseVersion < newestSecurity)
             {
                 continue;
             }
 
             foreach (var sdk in release.SdkVersions())
             {
-                if (ReleaseVersion.IsPrerelease(sdk) ||
-                    ReleaseVersion.FeatureBand(sdk) != band)
+                // Parsing keeps only the numeric part, so an rc would otherwise pass for the stable
+                // it led to.
+                if (ReleaseVersion.IsPrerelease(sdk))
                 {
                     continue;
                 }
 
                 var parsed = ReleaseVersion.ParseNumeric(sdk);
-                if (parsed == null ||
-                    parsed <= current)
+                if (parsed != null &&
+                    parsed > current &&
+                    ReleaseVersion.FeatureBand(parsed) == band)
                 {
-                    continue;
-                }
-
-                if (bestParsed == null ||
-                    parsed > bestParsed)
-                {
-                    best = sdk;
-                    bestParsed = parsed;
+                    yield return (sdk, parsed);
                 }
             }
         }
-
-        return best ?? channel.LatestSdk;
-    }
-
-    static Version? Newest(IEnumerable<string> versions)
-    {
-        Version? newest = null;
-        foreach (var version in versions)
-        {
-            var parsed = ReleaseVersion.ParseNumeric(version);
-            if (parsed != null &&
-                (newest == null || parsed > newest))
-            {
-                newest = parsed;
-            }
-        }
-
-        return newest;
-    }
-
-    static bool CrossesFeatureBand(string version, string? fixedIn)
-    {
-        var from = ReleaseVersion.FeatureBand(version);
-        var to = ReleaseVersion.FeatureBand(fixedIn);
-
-        return from != null &&
-               to != null &&
-               from != to;
     }
 
     public static bool IsEol(ChannelReleases channel, DateTime utcNow)

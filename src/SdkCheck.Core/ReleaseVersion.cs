@@ -54,8 +54,21 @@ public static class ReleaseVersion
     public static int? FeatureBand(string? version)
     {
         var parsed = ParseNumeric(version);
-        if (parsed == null ||
-            parsed.Build < 0)
+        if (parsed == null)
+        {
+            return null;
+        }
+
+        return FeatureBand(parsed);
+    }
+
+    /// <summary>
+    /// The band of an already parsed version, for callers holding one - the string form parses, and
+    /// the same string is commonly compared and banded in one pass.
+    /// </summary>
+    public static int? FeatureBand(Version parsed)
+    {
+        if (parsed.Build < 0)
         {
             return null;
         }

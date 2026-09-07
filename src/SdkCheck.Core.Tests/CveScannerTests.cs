@@ -111,6 +111,39 @@ public class CveScannerTests
         await Assert.That(finding.CrossesFeatureBand).IsTrue();
     }
 
+    /// <summary>
+    /// A feed value the version parser cannot make sense of has to come back as a message rather
+    /// than an exception - nothing this package discovers may fail a build. There is no band to hold
+    /// the recommendation to, so the channel's latest is named, and nothing claims a band change.
+    /// </summary>
+    [Test]
+    public async Task SdkVersionThatDoesNotParseFallsBackToTheChannelLatest()
+    {
+        var channel = Feeds.Load("8.0");
+        channel.Releases.Single(_ => _.ReleaseVersion == "8.0.0").Sdks.Add(new() { Version = "8.0.banana" });
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0.banana"), channel, now);
+
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.CrossesFeatureBand).IsFalse();
+    }
+
+    /// <summary>
+    /// The same for a version with no patch component. "8.0" parses, but sits on no feature band, so
+    /// there is again nothing to hold the fix to and nothing to say has changed.
+    /// </summary>
+    [Test]
+    public async Task SdkVersionWithNoFeatureBandFallsBackToTheChannelLatest()
+    {
+        var channel = Feeds.Load("8.0");
+        channel.Releases.Single(_ => _.ReleaseVersion == "8.0.0").Sdks.Add(new() { Version = "8.0" });
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0"), channel, now);
+
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.CrossesFeatureBand).IsFalse();
+    }
+
     [Test]
     public async Task UnknownVersionIsNotAFinding() =>
         await Assert.That(Scan(new(ComponentKind.Sdk, "8.0.999"))).IsNull();
