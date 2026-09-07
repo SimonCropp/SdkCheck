@@ -92,7 +92,8 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
 
         try
         {
-            return new(Deserialize(File.ReadAllText(path)));
+            using var file = File.OpenRead(path);
+            return new(Deserialize(file));
         }
         catch (Exception exception)
         {
@@ -106,16 +107,20 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
         log?.Invoke($"SdkCheck: fetching {url}");
 
         using var cancellation = new CancelSource(options.Timeout);
-        using var response = HttpClientFactory.Get()
-            .GetAsync(url, cancellation.Token)
-            .GetAwaiter()
-            .GetResult();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var response = HttpClientFactory.Get().Send(request, cancellation.Token);
         response.EnsureSuccessStatusCode();
-        var json = response.Content.ReadAsStringAsync(cancellation.Token).GetAwaiter().GetResult();
-        return Deserialize(json);
+        using var content = response.Content.ReadAsStream(cancellation.Token);
+
+        return Deserialize(content);
     }
 
-    static ChannelReleases Deserialize(string json)
+    /// <summary>
+    /// Reads straight from the stream rather than through an intermediate string. The live 8.0 feed
+    /// is around 1.5 MB, so materialising it first allocates a 1.5 MB string for no reason.
+    /// </summary>
+    static ChannelReleases Deserialize(Stream json)
     {
         var channel = JsonSerializer.Deserialize(json, FeedJsonContext.Default.ChannelReleases);
         if (channel == null)
@@ -146,7 +151,8 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
                 return null;
             }
 
-            return JsonSerializer.Deserialize(File.ReadAllText(path), FeedJsonContext.Default.CacheEntry);
+            using var file = File.OpenRead(path);
+            return JsonSerializer.Deserialize(file, FeedJsonContext.Default.CacheEntry);
         }
         catch (Exception exception)
         {
