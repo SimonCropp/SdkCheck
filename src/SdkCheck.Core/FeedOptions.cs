@@ -22,11 +22,14 @@ public class FeedOptions
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// How long a fetch failure is remembered, whether it left nothing at all or fell back to an
-    /// expired cache. Deliberately far
-    /// shorter than <see cref="CacheTtl"/>: that one exists so a forty-project build reads a good
-    /// feed once, while applying it to a failure would let one dropped connection silence the check
-    /// until the build node exits, and MSBuild nodes outlive the build that started them.
+    /// How long the first fetch failure is remembered, whether it left nothing at all or fell back to
+    /// an expired cache. Deliberately far shorter than <see cref="CacheTtl"/>: that one exists so a
+    /// forty-project build reads a good feed once, while applying it to a failure would let one
+    /// dropped connection silence the check until the build node exits, and MSBuild nodes outlive the
+    /// build that started them.
+    ///
+    /// Each consecutive failure after the first doubles the wait, up to <see cref="CacheTtl"/>, so a
+    /// feed that is unreachable for the length of a build is not retried once a minute for all of it.
     /// </summary>
     public TimeSpan FailureTtl { get; set; } = TimeSpan.FromMinutes(1);
 

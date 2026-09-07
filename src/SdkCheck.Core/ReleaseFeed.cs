@@ -23,28 +23,67 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
     {
         var key = $"{options.OverrideDirectory}|{CacheDirectory()}|{options.BaseUrl}|{channel}";
         if (memos.TryGetValue(key, out var memo) &&
-            memo.IsFresh(utcNow, Ttl(memo.Result)))
+            memo.IsFresh(utcNow, Ttl(memo.Result, memo.Failures)))
         {
             return memo.Result;
         }
 
         var result = Resolve(channel, utcNow);
-        memos[key] = new(utcNow, result);
+
+        // A run of failures is counted, not just the last one. One retry a minute is right for a
+        // connection that dropped; on a network that black-holes packets each retry costs a project's
+        // BeforeBuild the full Timeout, and the node keeps paying that for the length of the build.
+        var failures = Failed(result) ? Failures(memo) + 1 : 0;
+        memos[key] = new(utcNow, result, failures);
         return result;
     }
 
+    static int Failures(Memo? memo) =>
+        memo?.Failures ?? 0;
+
+    static bool Failed(FeedResult result) =>
+        result.Channel == null || result.FetchFailed;
+
     /// <summary>
-    /// Read from the caller's own options at every use rather than frozen into the entry when it was
-    /// written. The memo is process wide and its key does not include the TTLs, so whichever project
-    /// resolved a channel first would otherwise set how long every project after it is held to -
-    /// leaving one asking for a shorter SdkCheckCacheHours ignored for the entry's lifetime.
+    /// How long an entry stands. Read from the caller's own options at every use rather than frozen
+    /// into the entry when it was written: the memo is process wide and its key does not include the
+    /// TTLs, so whichever project resolved a channel first would otherwise set how long every project
+    /// after it is held to, leaving one asking for a shorter SdkCheckCacheHours ignored for the
+    /// entry's lifetime.
     /// </summary>
-    TimeSpan Ttl(FeedResult result) =>
-        // A fetch that failed is held briefly whether or not an expired cache stood in for it. The
-        // stale channel is worth reporting against, but it is not a fresh read: holding it for the
-        // cache TTL would mean one dropped connection pins the node to month old data all day, and
-        // the disk cache it came from never gets rewritten either.
-        result.Channel == null || result.FetchFailed ? options.FailureTtl : options.CacheTtl;
+    /// <remarks>
+    /// A fetch that failed is held briefly whether or not an expired cache stood in for it. The stale
+    /// channel is worth reporting against, but it is not a fresh read: holding it for the cache TTL
+    /// would mean one dropped connection pins the node to month old data all day, and the disk cache
+    /// it came from never gets rewritten either.
+    ///
+    /// Each failure after the first doubles that, up to the cache TTL. A feed that is briefly
+    /// unreachable is still retried a minute later, while one that stays unreachable stops costing a
+    /// stall a minute per channel per node - the case where nothing is coming back and every attempt
+    /// waits out the whole Timeout before saying so.
+    /// </remarks>
+    TimeSpan Ttl(FeedResult result, int failures)
+    {
+        if (!Failed(result))
+        {
+            return options.CacheTtl;
+        }
+
+        var ttl = options.FailureTtl;
+        for (var doubling = 1; doubling < failures; doubling++)
+        {
+            // Doubled by addition, and compared before rather than after: the cap is what stops this,
+            // not an overflowing multiply on a node that has been failing for a long time.
+            if (ttl >= options.CacheTtl - ttl)
+            {
+                return options.CacheTtl;
+            }
+
+            ttl += ttl;
+        }
+
+        return ttl;
+    }
 
     /// <summary>
     /// Drops the process wide memo. For tests, which would otherwise see one another's feeds.

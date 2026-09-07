@@ -171,6 +171,91 @@ public class ReleaseFeedTests
         await Assert.That(feed.Get("8.0", retried).Channel!.LatestSdk).IsEqualTo("6.0.428");
     }
 
+    /// <summary>
+    /// A feed that stays unreachable is retried less and less. Each attempt on a network that drops
+    /// packets rather than refusing them costs a project's BeforeBuild the whole timeout, and once a
+    /// minute for the length of the build is a cost with nothing to show for it.
+    /// </summary>
+    [Test]
+    public async Task RepeatedFailuresAreRetriedLessOften()
+    {
+        using var directory = new TempDirectory();
+        var feed = Feed(new() { OverrideDirectory = directory });
+
+        await Assert.That(feed.Get("8.0", resolved).Channel).IsNull();
+
+        // Past the first minute, so this resolves and fails again. Two in a row now.
+        var second = resolved.AddSeconds(90);
+        await Assert.That(feed.Get("8.0", second).Channel).IsNull();
+
+        File.Copy(Path.Combine(Feeds.Directory, "8.0.json"), Path.Combine(directory, "8.0.json"));
+
+        // Another 90 seconds is past the first minute but inside the two the second failure earns,
+        // so the readable feed is not looked for yet.
+        await Assert.That(feed.Get("8.0", second.AddSeconds(90)).Channel).IsNull();
+
+        await Assert.That(feed.Get("8.0", second.AddMinutes(3)).Channel).IsNotNull();
+    }
+
+    /// <summary>
+    /// The doubling stops at the cache TTL. Nothing is held longer for having failed than a good
+    /// feed is held for having worked.
+    /// </summary>
+    [Test]
+    public async Task BackoffIsCappedAtTheCacheTtl()
+    {
+        using var directory = new TempDirectory();
+        var feed = Feed(
+            new()
+            {
+                OverrideDirectory = directory,
+                CacheTtl = TimeSpan.FromSeconds(90)
+            });
+
+        await Assert.That(feed.Get("8.0", resolved).Channel).IsNull();
+
+        var second = resolved.AddSeconds(70);
+        await Assert.That(feed.Get("8.0", second).Channel).IsNull();
+
+        File.Copy(Path.Combine(Feeds.Directory, "8.0.json"), Path.Combine(directory, "8.0.json"));
+
+        // Uncapped the second failure would be held two minutes. Capped it is held ninety seconds,
+        // so a hundred is past it.
+        await Assert.That(feed.Get("8.0", second.AddSeconds(100)).Channel).IsNotNull();
+    }
+
+    /// <summary>
+    /// A feed that comes back clears what it was owed. The next failure is a first failure, not the
+    /// third of a run that ended an hour ago.
+    /// </summary>
+    [Test]
+    public async Task SuccessResetsTheBackoff()
+    {
+        using var directory = new TempDirectory();
+        var path = Path.Combine(directory, "8.0.json");
+        var feed = Feed(new() { OverrideDirectory = directory });
+
+        await Assert.That(feed.Get("8.0", resolved).Channel).IsNull();
+
+        var second = resolved.AddSeconds(90);
+        await Assert.That(feed.Get("8.0", second).Channel).IsNull();
+
+        File.Copy(Path.Combine(Feeds.Directory, "8.0.json"), path);
+
+        var recovered = second.AddMinutes(3);
+        await Assert.That(feed.Get("8.0", recovered).Channel).IsNotNull();
+
+        File.Delete(path);
+
+        var failedAgain = recovered.AddHours(25);
+        await Assert.That(feed.Get("8.0", failedAgain).Channel).IsNull();
+
+        File.Copy(Path.Combine(Feeds.Directory, "8.0.json"), path);
+
+        // A minute and a half. Still a run of two, and this would be held for two minutes.
+        await Assert.That(feed.Get("8.0", failedAgain.AddSeconds(90)).Channel).IsNotNull();
+    }
+
     // Nothing listens on port 1, so a fetch fails there without the network being involved.
     const string unreachable = "http://127.0.0.1:1";
 
