@@ -104,6 +104,13 @@ Each code is suppressible with `NoWarn` in the ordinary way. See
 | `SdkCheckCacheDirectory` | `%LOCALAPPDATA%/SdkCheck` | Also settable with the `SDKCHECK_CACHE` environment variable. |
 | `SdkCheckFeedOverride` | | A directory of `{channel}.json` files to read instead of the network. |
 
+Set these where every project in the build sees the same value — `Directory.Build.props`, or `-p:`
+on the command line. A finding is reported once per build, keyed by code and version, and the
+project that reaches the check first is the one that reports it, at the severity that project was
+configured with; every project after that skips it silently. The SDK is shared by the whole build,
+so `SdkCheckTreatAsError` set in one csproj of many fails the build only when that csproj happens to
+run first, which build order does not guarantee. A single-project build has no such ordering.
+
 
 ## A build is not a schedule
 
