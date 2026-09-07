@@ -18,13 +18,14 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
     {
         var key = $"{options.OverrideDirectory}|{CacheDirectory()}|{channel}";
         if (memos.TryGetValue(key, out var memo) &&
-            DateTime.UtcNow - memo.Resolved < options.CacheTtl)
+            memo.IsFresh(DateTime.UtcNow))
         {
             return memo.Result;
         }
 
         var result = Resolve(channel);
-        memos[key] = new(DateTime.UtcNow, result);
+        var ttl = result.Channel == null ? options.FailureTtl : options.CacheTtl;
+        memos[key] = new(DateTime.UtcNow, result, ttl);
         return result;
     }
 
@@ -179,17 +180,33 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
             // Written to a temp file and moved into place so a concurrent project in the same build
             // cannot read a half written file. Losing the race is fine - the other writer wrote the
             // same content.
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-
-            File.Move(temp, path);
+            MoveOver(temp, path);
         }
         catch (Exception exception)
         {
             log?.Invoke($"SdkCheck: could not write cache '{path}': {Describe(exception)}");
             Discard(temp);
+        }
+    }
+
+    /// <summary>
+    /// Replaces the cache file with the temp one, without the file ever being absent.
+    /// </summary>
+    /// <remarks>
+    /// Deleting first and moving second leaves a window in which a concurrent reader finds no cache,
+    /// and goes to the network for a feed that is sitting right there - which is the cost the cache
+    /// exists to avoid. netstandard2.0 has no overwriting File.Move, so the move is attempted first
+    /// and File.Replace handles the case where a file is already there.
+    /// </remarks>
+    static void MoveOver(string temp, string path)
+    {
+        try
+        {
+            File.Move(temp, path);
+        }
+        catch (IOException)
+        {
+            File.Replace(temp, path, null);
         }
     }
 

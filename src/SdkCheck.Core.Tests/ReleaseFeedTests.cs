@@ -1,3 +1,9 @@
+/// <summary>
+/// Serialized because every test here clears the process wide memo through <see cref="Feed"/>, and
+/// one test's reset landing between another's two calls to Get is the difference between a memoised
+/// result and a re-resolved one.
+/// </summary>
+[NotInParallel]
 public class ReleaseFeedTests
 {
     [Test]
@@ -96,6 +102,49 @@ public class ReleaseFeedTests
 
         await Assert.That(result.Channel).IsNull();
         await Assert.That(result.Error).IsNotNull();
+    }
+
+    /// <summary>
+    /// A success is held for the full cache TTL. Forty projects in one build read the feed once.
+    /// </summary>
+    [Test]
+    public async Task SuccessIsMemoised()
+    {
+        using var directory = new TempDirectory();
+        var path = Path.Combine(directory, "8.0.json");
+        File.Copy(Path.Combine(Feeds.Directory, "8.0.json"), path);
+
+        var feed = Feed(new() { OverrideDirectory = directory });
+
+        await Assert.That(feed.Get("8.0").Channel).IsNotNull();
+
+        File.Delete(path);
+
+        // Memoised, so the now missing file is never looked for.
+        await Assert.That(feed.Get("8.0").Channel).IsNotNull();
+    }
+
+    /// <summary>
+    /// A failure is not held that long. MSBuild reuses build nodes across builds, so a failure kept
+    /// for the cache TTL outlives the build it happened in: one dropped connection and the check
+    /// says nothing for the rest of the day, long after the network came back.
+    /// </summary>
+    [Test]
+    public async Task FailureIsNotHeldForTheCacheTtl()
+    {
+        using var directory = new TempDirectory();
+        var feed = Feed(
+            new()
+            {
+                OverrideDirectory = directory,
+                FailureTtl = TimeSpan.Zero
+            });
+
+        await Assert.That(feed.Get("8.0").Channel).IsNull();
+
+        File.Copy(Path.Combine(Feeds.Directory, "8.0.json"), Path.Combine(directory, "8.0.json"));
+
+        await Assert.That(feed.Get("8.0").Channel).IsNotNull();
     }
 
     static ReleaseFeed Feed(FeedOptions options)
