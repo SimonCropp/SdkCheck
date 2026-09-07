@@ -147,6 +147,39 @@ public class ReleaseFeedTests
         await Assert.That(feed.Get("8.0").Channel).IsNotNull();
     }
 
+    /// <summary>
+    /// A fetch that fell back to an expired cache is a failure too. Held for the cache TTL, one
+    /// dropped connection would pin a reused build node to month old data for the rest of the day,
+    /// and the disk cache it reads from would never be rewritten either.
+    /// </summary>
+    [Test]
+    public async Task StaleFallbackIsNotHeldForTheCacheTtl()
+    {
+        using var cache = new TempDirectory();
+        WriteCache(cache, "8.0", DateTime.UtcNow.AddDays(-30));
+
+        var feed = Feed(
+            new()
+            {
+                CacheDirectory = cache,
+                BaseUrl = unreachable,
+                Timeout = TimeSpan.FromSeconds(1),
+                FailureTtl = TimeSpan.Zero
+            });
+
+        // Expired, and the feed cannot be reached, so the fallback is what comes back.
+        await Assert.That(feed.Get("8.0").Channel!.LatestSdk).IsEqualTo("8.0.204");
+
+        // The network coming back, stood in for by a fresh cache holding a different channel: the
+        // memo has to be past by now for it to be seen at all.
+        WriteCache(cache, "8.0", DateTime.UtcNow, "6.0");
+
+        await Assert.That(feed.Get("8.0").Channel!.LatestSdk).IsEqualTo("6.0.428");
+    }
+
+    // Nothing listens on port 1, so a fetch fails there without the network being involved.
+    const string unreachable = "http://127.0.0.1:1";
+
     static ReleaseFeed Feed(FeedOptions options)
     {
         // The memo is process wide, so tests would otherwise see one another's channels.
@@ -154,9 +187,9 @@ public class ReleaseFeedTests
         return new(options);
     }
 
-    static void WriteCache(string directory, string channel, DateTime fetched)
+    static void WriteCache(string directory, string channel, DateTime fetched, string? content = null)
     {
-        var json = File.ReadAllText(Path.Combine(Feeds.Directory, $"{channel}.json"));
+        var json = File.ReadAllText(Path.Combine(Feeds.Directory, $"{content ?? channel}.json"));
         var entry = $$"""
                       {
                         "fetched": "{{fetched.ToString("O", CultureInfo.InvariantCulture)}}",

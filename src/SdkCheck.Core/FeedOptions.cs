@@ -10,12 +10,20 @@ public class FeedOptions
 
     public string? CacheDirectory { get; set; }
 
+    /// <summary>
+    /// The root the per-channel "{channel}/releases.json" documents hang off. Overridable so a build
+    /// can point at a mirror, and so tests can exercise the unreachable-feed paths without the
+    /// network.
+    /// </summary>
+    public string BaseUrl { get; set; } = "https://builds.dotnet.microsoft.com/dotnet/release-metadata";
+
     public TimeSpan CacheTtl { get; set; } = TimeSpan.FromHours(24);
 
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// How long a channel that could not be read is remembered as unreadable. Deliberately far
+    /// How long a fetch failure is remembered, whether it left nothing at all or fell back to an
+    /// expired cache. Deliberately far
     /// shorter than <see cref="CacheTtl"/>: that one exists so a forty-project build reads a good
     /// feed once, while applying it to a failure would let one dropped connection silence the check
     /// until the build node exits, and MSBuild nodes outlive the build that started them.

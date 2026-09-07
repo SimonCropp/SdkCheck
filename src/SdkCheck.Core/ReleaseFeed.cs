@@ -7,8 +7,6 @@ namespace SdkCheck;
 /// </summary>
 public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
 {
-    public const string BaseUrl = "https://builds.dotnet.microsoft.com/dotnet/release-metadata";
-
     // MSBuild reuses build nodes, so one process serves many builds over its lifetime. Memoising
     // here is what keeps a solution-wide build at one fetch per channel per day rather than one per
     // project - the disk cache alone would still re-read and re-parse for every project.
@@ -16,7 +14,7 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
 
     public FeedResult Get(string channel)
     {
-        var key = $"{options.OverrideDirectory}|{CacheDirectory()}|{channel}";
+        var key = $"{options.OverrideDirectory}|{CacheDirectory()}|{options.BaseUrl}|{channel}";
         if (memos.TryGetValue(key, out var memo) &&
             memo.IsFresh(DateTime.UtcNow))
         {
@@ -24,7 +22,12 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
         }
 
         var result = Resolve(channel);
-        var ttl = result.Channel == null ? options.FailureTtl : options.CacheTtl;
+
+        // A fetch that failed is held briefly whether or not an expired cache stood in for it. The
+        // stale channel is worth reporting against, but it is not a fresh read: holding it for the
+        // cache TTL would mean one dropped connection pins the node to month old data all day, and
+        // the disk cache it came from never gets rewritten either.
+        var ttl = result.Channel == null || result.FetchFailed ? options.FailureTtl : options.CacheTtl;
         memos[key] = new(DateTime.UtcNow, result, ttl);
         return result;
     }
@@ -76,10 +79,10 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
             // running this build can fix, so it must never be what fails their build.
             if (cached?.Channel != null)
             {
-                return new(cached.Channel);
+                return new(cached.Channel, fetchFailed: true);
             }
 
-            return new(error: reason);
+            return new(error: reason, fetchFailed: true);
         }
     }
 
@@ -104,7 +107,7 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
 
     ChannelReleases Fetch(string channel)
     {
-        var url = $"{BaseUrl}/{channel}/releases.json";
+        var url = $"{options.BaseUrl}/{channel}/releases.json";
         log?.Invoke($"SdkCheck: fetching {url}");
 
         using var cancellation = new CancelSource(options.Timeout);
