@@ -29,8 +29,9 @@ long `LogWarning` overload:
 The version named stays on the feature band the SDK is already on. 8.0.100 is told to move to
 8.0.130, not to the channel's latest 8.0.424: a `global.json` pinned to the 1xx band does not roll to
 4xx, so naming the latest asks for a change the reader may not be in a position to make. The band's
-newest is named only when it shipped in a release at least as new as the last security release
-counted, since an older one carries some of the fixes and not the rest.
+newest is named only when it shipped in a release at least as new as the last release that fixed one
+of the CVEs listed, since an older one carries some of them and not the rest. A release flagged
+security that names no CVE is not one of those, and does not raise the bar.
 
 When the band cannot be held to, the channel's latest is named instead and the message says both that
 the band changes and why. Either nothing newer shipped on the band at all:
@@ -39,12 +40,12 @@ the band changes and why. Either nothing newer shipped on the band at all:
 Update to 8.0.204, on a different feature band: nothing newer shipped on the band in use.
 ```
 
-or something did and it predates the last security release on the channel, so it carries part of the
-list and not the rest. That version is named too: it is a partial fix that keeps a `global.json` pin
+or something did and it shipped before the last of the fixes, so it carries part of the list and not
+the rest. That version is named too: it is a partial fix that keeps a `global.json` pin
 intact, and which of the two to take is the reader's call, not this package's.
 
 ```
-Update to 8.0.204, on a different feature band: the band in use stops at 8.0.105, which predates the channel's last security release.
+Update to 8.0.204, on a different feature band: the band in use stops at 8.0.105, which shipped before the last of these fixes.
 ```
 
 The band is described as different rather than later because it can be either. A component on a band

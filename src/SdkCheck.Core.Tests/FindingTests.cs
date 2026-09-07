@@ -32,8 +32,8 @@ public class FindingTests
                 """);
 
     /// <summary>
-    /// The other reason the band is left: something did ship on it, and predates the security release
-    /// that carries the rest of the list. Naming it leaves the reader to weigh a partial fix that
+    /// The other reason the band is left: something did ship on it, and came before the release that
+    /// carries the rest of the list. Naming it leaves the reader to weigh a partial fix that
     /// keeps the pin against a whole one that does not.
     /// </summary>
     [Test]
@@ -50,7 +50,7 @@ public class FindingTests
                     .Body())
             .Snapshot(
                 """
-                SDK 8.0.100 is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204, on a different feature band: the band in use stops at 8.0.105, which predates the channel's last security release.
+                SDK 8.0.100 is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204, on a different feature band: the band in use stops at 8.0.105, which shipped before the last of these fixes.
                 CVEs:
                  * CVE-2024-0001
                 """);

@@ -35,9 +35,9 @@ public class Finding(
 
     /// <summary>
     /// The newest SDK on the component's own feature band, when one shipped and was still not named
-    /// as the fix: it came before the channel's last security release, so it carries some of the CVEs
-    /// listed and not the rest. Null when the band has stopped shipping, which is the other reason
-    /// <see cref="FixedIn"/> can leave the band.
+    /// as the fix: it came before the last release that fixed one of the CVEs listed, so it carries
+    /// some of them and not the rest. Null when the band has stopped shipping, which is the other
+    /// reason <see cref="FixedIn"/> can leave the band.
     /// </summary>
     public string? BandNewest { get; } = bandNewest;
 
@@ -91,7 +91,7 @@ public class Finding(
 
         if (BandNewest != null)
         {
-            return $"{band}: the band in use stops at {BandNewest}, which predates the channel's last security release";
+            return $"{band}: the band in use stops at {BandNewest}, which shipped before the last of these fixes";
         }
 
         if (CrossesFeatureBand)

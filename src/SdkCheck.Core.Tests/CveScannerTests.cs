@@ -151,6 +151,30 @@ public class CveScannerTests
         await Assert.That(finding.BandNewest).IsNull();
     }
 
+    /// <summary>
+    /// A release flagged security that names no CVE fixes nothing, so it cannot be the thing an SDK
+    /// is behind. Counting it would raise the bar over 8.0.105 - which carries every CVE reported
+    /// here - and send a reader off their feature band for nothing.
+    /// </summary>
+    [Test]
+    public async Task SecurityReleaseWithNoCvesDoesNotRaiseTheBar()
+    {
+        var channel = Feeds.Load("8.0");
+        var last = channel.Releases.Single(_ => _.ReleaseVersion == "8.0.4");
+        last.CveList.Clear();
+        last.Sdks.RemoveAll(_ => _.Version == "8.0.106");
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0.100"), channel, now);
+
+        // 8.0.2 is the last release that fixed any of these, and 8.0.105 came after it.
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.105");
+        await Assert.That(finding.CrossesFeatureBand).IsFalse();
+        await Assert.That(finding.BandNewest).IsNull();
+        // The same three CVEs are still reported: what the empty release changes is the bar, not the
+        // list. 8.0.4 lists nothing of its own, and CVE-2024-0004 comes from 8.0.2 either way.
+        await Assert.That(finding.Cves.Count).IsEqualTo(3);
+    }
+
     [Test]
     public async Task UnknownVersionIsNotAFinding() =>
         await Assert.That(Scan(new(ComponentKind.Sdk, "8.0.999"))).IsNull();

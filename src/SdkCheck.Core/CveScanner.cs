@@ -33,9 +33,14 @@ public static class CveScanner
             return null;
         }
 
-        var newerSecurity = NewerSecurityReleases(channel, shippedVersion).ToList();
+        // Only the releases that named a CVE, not every release flagged security. A security release
+        // with an empty cve-list has nothing to be behind, and counting it would raise the bar an
+        // SDK has to clear and reject one that carries every fix reported.
+        var fixes = NewerSecurityReleases(channel, shippedVersion)
+            .Where(_ => _.CveList.Any(cve => !string.IsNullOrWhiteSpace(cve.Id)))
+            .ToList();
 
-        var cves = newerSecurity
+        var cves = fixes
             .SelectMany(_ => _.CveList)
             .Where(_ => !string.IsNullOrWhiteSpace(_.Id))
             .GroupBy(_ => _.Id, StringComparer.OrdinalIgnoreCase)
@@ -58,7 +63,7 @@ public static class CveScanner
                 channel.LatestRuntime);
         }
 
-        var (fixedIn, crossesFeatureBand, bandNewest) = SdkFix(component, channel, newerSecurity);
+        var (fixedIn, crossesFeatureBand, bandNewest) = SdkFix(component, channel, fixes);
 
         return new(
             Diagnostics.SdkCve,
@@ -71,14 +76,15 @@ public static class CveScanner
     }
 
     /// <summary>
-    /// The SDK version to move to.
+    /// The SDK version to move to, given the releases that fixed the CVEs being reported.
     /// </summary>
     /// <remarks>
     /// Naming the channel's latest tells anyone on an older feature band to make a change they may
     /// not be able to make: a global.json pinned to 8.0.1xx does not roll to 8.0.4xx. The newest SDK
     /// on the component's own band is named instead - but only when it shipped in a release at least
-    /// as new as the last security release counted above, because an older one carries some of the
-    /// fixes and not the rest, and naming it would report the problem as solved when it is not.
+    /// as new as the last release that contributed one of the CVEs listed, because an older one
+    /// carries some of them and not the rest, and naming it would report the problem as solved when
+    /// it is not.
     /// <para>
     /// Both reasons the band cannot be held to end at the channel's latest, so what the search found
     /// on the band comes back with it: <see cref="Finding.BandNewest"/> is the version that was there
@@ -89,7 +95,7 @@ public static class CveScanner
     static (string? FixedIn, bool CrossesFeatureBand, string? BandNewest) SdkFix(
         Component component,
         ChannelReleases channel,
-        List<Release> newerSecurity)
+        List<Release> fixes)
     {
         var current = ReleaseVersion.ParseNumeric(component.Version);
         if (current == null)
@@ -106,16 +112,15 @@ public static class CveScanner
         }
 
         // Never null: NewerSecurityReleases keeps only releases whose version parsed, and Scan
-        // returns before here unless one of them listed a CVE. It is also the channel's last
-        // security release, since every security release newer than the component's own is counted.
-        var newestSecurity = newerSecurity.Max(_ => ReleaseVersion.ParseNumeric(_.ReleaseVersion))!;
+        // returns before here unless one of them listed a CVE.
+        var lastFix = fixes.Max(_ => ReleaseVersion.ParseNumeric(_.ReleaseVersion))!;
 
         var onBand = BandSdks(channel, current, band.Value)
             .OrderByDescending(_ => _.Parsed)
             .ToList();
 
         var best = onBand
-            .Where(_ => _.Release >= newestSecurity)
+            .Where(_ => _.Release >= lastFix)
             .Select(_ => _.Sdk)
             .FirstOrDefault();
 
