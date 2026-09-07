@@ -16,6 +16,20 @@ public class FindingTests
                 See: https://github.com/SimonCropp/SdkCheck/blob/main/docs/DiagnosticCodes.md#sdkcheck001
                 """);
 
+    /// <summary>
+    /// When the band changes, the message says so: a reader pinned to the old one has more to change
+    /// than a version number.
+    /// </summary>
+    [Test]
+    public Task SdkCveCrossingAFeatureBand() =>
+        Verify(new Finding(Diagnostics.SdkCve, sdk, "8.0", Cves(1), "8.0.204", crossesFeatureBand: true).Body())
+            .Snapshot(
+                """
+                SDK 8.0.100 is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204, on a later feature band: nothing newer shipped on this one.
+                CVEs:
+                 * CVE-2024-0001
+                """);
+
     [Test]
     public Task Eol() =>
         Verify(new Finding(Diagnostics.Eol, sdk, "6.0", eolDate: "2024-11-12").Message())

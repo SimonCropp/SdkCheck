@@ -2,13 +2,19 @@ public class CveScannerTests
 {
     static readonly DateTime now = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>
+    /// 8.0.100 is on the 1xx band, so the version to move to is 8.0.106 - the 1xx SDK shipped by the
+    /// newest security release - rather than the channel's latest 8.0.204, which a global.json
+    /// pinned to the band cannot roll to.
+    /// </summary>
     [Test]
     public async Task SdkBehindTwoSecurityReleases()
     {
         var finding = Scan(new(ComponentKind.Sdk, "8.0.100"));
 
         await Assert.That(finding!.Code).IsEqualTo(Diagnostics.SdkCve);
-        await Assert.That(finding.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.FixedIn).IsEqualTo("8.0.106");
+        await Assert.That(finding.CrossesFeatureBand).IsFalse();
         await Verify(finding.Cves.Select(_ => _.Id))
             .Snapshot(
                 """
@@ -69,6 +75,40 @@ public class CveScannerTests
                   CVE-2024-0004
                 ]
                 """);
+    }
+
+    /// <summary>
+    /// A band that has stopped shipping has nothing to move to on itself, so the channel's latest is
+    /// named and the message says the band changes.
+    /// </summary>
+    [Test]
+    public async Task DiscontinuedFeatureBandFallsBackToTheChannelLatest()
+    {
+        var channel = Feeds.Load("8.0");
+        // 8.0.300 shipped with the original release and never again.
+        channel.Releases.Single(_ => _.ReleaseVersion == "8.0.0").Sdks.Add(new() { Version = "8.0.300" });
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0.300"), channel, now);
+
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.CrossesFeatureBand).IsTrue();
+    }
+
+    /// <summary>
+    /// The newest SDK on the band is only the answer when it shipped in a release at least as new as
+    /// the last security release counted. 8.0.105 came with 8.0.3, before the security release 8.0.4,
+    /// so naming it would report a fix that carries only some of the CVEs.
+    /// </summary>
+    [Test]
+    public async Task StaleFeatureBandIsNotNamedAsTheFix()
+    {
+        var channel = Feeds.Load("8.0");
+        channel.Releases.Single(_ => _.ReleaseVersion == "8.0.4").Sdks.RemoveAll(_ => _.Version == "8.0.106");
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0.100"), channel, now);
+
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.CrossesFeatureBand).IsTrue();
     }
 
     [Test]

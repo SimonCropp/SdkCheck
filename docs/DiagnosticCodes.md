@@ -22,9 +22,22 @@ long `LogWarning` overload:
 - **Syntax:** `SDK {version} is affected by {n} CVEs published since it shipped, fixed in later .NET
   {channel} releases. Update to {version}. CVEs: {ids}`
 - **Example:** `SDK 8.0.100 is affected by 70 CVEs published since it shipped, fixed in later .NET
-  8.0 releases. Update to 8.0.424. CVEs: CVE-2024-0056, CVE-2024-0057, CVE-2024-20672, ...`
+  8.0 releases. Update to 8.0.130. CVEs: CVE-2024-0056, CVE-2024-0057, CVE-2024-20672, ...`
 - **Fix:** Install the named SDK. If a `global.json` pins the version, raise it there too, otherwise
   the machine keeps selecting the old one.
+
+The version named stays on the feature band the SDK is already on. 8.0.100 is told to move to
+8.0.130, not to the channel's latest 8.0.424: a `global.json` pinned to the 1xx band does not roll to
+4xx, so naming the latest asks for a change the reader may not be in a position to make. The band's
+newest is named only when it shipped in a release at least as new as the last security release
+counted, since an older one carries some of the fixes and not the rest.
+
+A band that has stopped shipping has nothing on it to move to. The channel's latest is named instead,
+and the message says the band changes:
+
+```
+Update to 8.0.204, on a later feature band: nothing newer shipped on this one.
+```
 
 Every id is listed, never a subset. The count and the version to move to already state everything
 that drives the action, so the ids are there for audit traceability - and a truncated audit list is

@@ -36,6 +36,12 @@ version baseline is maintained here.
 
 - Adding or changing a diagnostic code means updating `docs/DiagnosticCodes.md` in the same change.
   `Diagnostics.DocsUrl` deep-links every emitted message to a section there.
+- The SDK version named as the fix stays on the feature band the component is on. A `global.json`
+  pinned to 8.0.1xx does not roll to 8.0.4xx, so the channel's `latest-sdk` is an instruction that
+  cannot always be followed. The band's newest counts only when it shipped in a release at least as
+  new as the last security release contributing CVEs - an older one is a partial fix reported as a
+  whole one. A band that has stopped shipping falls back to `latest-sdk`, and the message then says
+  the band changes.
 - Nothing this package discovers may fail a consumer's build except the SDK running it sitting on an
   out-of-support channel. An unreachable feed, a corrupt cache, a version the feed has never heard
   of: all resolve to a low-importance message. A package that breaks builds when a network hiccups

@@ -7,7 +7,8 @@ public class Finding(
     IReadOnlyList<Cve>? cves = null,
     string? fixedIn = null,
     string? eolDate = null,
-    string? detail = null)
+    string? detail = null,
+    bool crossesFeatureBand = false)
 {
     public string Code { get; } = code;
     public Component Component { get; } = component;
@@ -18,6 +19,13 @@ public class Finding(
     /// The latest SDK or runtime version on this channel - what to move to.
     /// </summary>
     public string? FixedIn { get; } = fixedIn;
+
+    /// <summary>
+    /// Whether <see cref="FixedIn"/> sits on a different SDK feature band than the component. True
+    /// only when the component's own band has stopped shipping, since a reader pinned to that band
+    /// has more to change than a version number.
+    /// </summary>
+    public bool CrossesFeatureBand { get; } = crossesFeatureBand;
 
     public string? EolDate { get; } = eolDate;
 
@@ -44,7 +52,13 @@ public class Finding(
             return $"Release metadata for .NET {Channel} could not be read ({Detail}), so {Component.Describe()} was not checked.";
         }
 
-        var upgrade = FixedIn == null ? "" : $" Update to {FixedIn}.";
+        var upgrade = "";
+        if (FixedIn != null)
+        {
+            upgrade = CrossesFeatureBand
+                ? $" Update to {FixedIn}, on a later feature band: nothing newer shipped on this one."
+                : $" Update to {FixedIn}.";
+        }
         return
             $"""
              {Component.Describe()} is affected by {Cves.Count} {(Cves.Count == 1 ? "CVE" : "CVEs")} published since it shipped, fixed in later .NET {Channel} releases.{upgrade}

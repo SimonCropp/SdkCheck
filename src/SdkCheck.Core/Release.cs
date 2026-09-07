@@ -48,6 +48,27 @@ public class Release
         return Sdks.Any(_ => string.Equals(_.Version, version, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Every SDK version this release shipped, newest band first. Duplicates are possible, since
+    /// <see cref="Sdk"/> is also the first entry of <see cref="Sdks"/> in every real feed.
+    /// </summary>
+    public IEnumerable<string> SdkVersions()
+    {
+        if (Sdk != null &&
+            !string.IsNullOrWhiteSpace(Sdk.Version))
+        {
+            yield return Sdk.Version;
+        }
+
+        foreach (var sdk in Sdks)
+        {
+            if (!string.IsNullOrWhiteSpace(sdk.Version))
+            {
+                yield return sdk.Version;
+            }
+        }
+    }
+
     public bool ShipsRuntime(string version) =>
         Matches(Runtime, version) ||
         Matches(AspNetCoreRuntime, version) ||
