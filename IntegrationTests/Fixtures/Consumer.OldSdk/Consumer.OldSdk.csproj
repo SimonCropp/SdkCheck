@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- netstandard2.0 so every installed SDK can build this, which is the point: the fixture is
+         built by an SDK older than the one this repo uses, and net10.0 would fail there with
+         NETSDK1045 before the task was ever loaded. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SdkCheck" Version="$(SdkCheckVersion)" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

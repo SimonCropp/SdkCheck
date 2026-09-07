@@ -4,9 +4,18 @@
     written by two imports means the last import wins for the whole project.
   -->
   <PropertyGroup>
+    <!--
+      One assembly for every host. netstandard2.0 loads under MSBuild on .NET Framework and under
+      MSBuild on .NET of any version.
+
+      This deliberately does not select a net10.0 asset for $(MSBuildRuntimeType) == 'Core'.
+      'Core' means "MSBuild running on .NET" - it says nothing about which version - so that
+      selection handed a net10.0 assembly to every consumer on an older SDK and failed their build
+      outright with MSB4062, "Could not load file or assembly 'System.Runtime, Version=10.0.0.0'".
+      A task package that only loads on the newest SDK is worse than one that is a little slower.
+    -->
     <_SdkCheck_TasksDir>$(MSBuildThisFileDirectory)..\tasks\</_SdkCheck_TasksDir>
-    <_SdkCheck_Assembly Condition="'$(MSBuildRuntimeType)' == 'Core'">$(_SdkCheck_TasksDir)net10.0\SdkCheck.dll</_SdkCheck_Assembly>
-    <_SdkCheck_Assembly Condition="'$(MSBuildRuntimeType)' != 'Core'">$(_SdkCheck_TasksDir)netstandard2.0\SdkCheck.dll</_SdkCheck_Assembly>
+    <_SdkCheck_Assembly>$(_SdkCheck_TasksDir)netstandard2.0\SdkCheck.dll</_SdkCheck_Assembly>
 
     <SdkCheckEnabled Condition="'$(SdkCheckEnabled)' == ''">true</SdkCheckEnabled>
 
@@ -29,25 +38,50 @@
              AssemblyFile="$(_SdkCheck_Assembly)" />
 
   <!--
-    Hooked after ResolveFrameworkReferences so @(ResolvedFrameworkReference) and
-    @(ResolvedRuntimePack) are populated, and the runtime versions can be read rather than guessed
-    from the SDK's bundled one.
+    Two targets, because the two checks need different things from the build.
 
-    Runs once per target framework, not once per project: a multi-targeted project resolves a
-    different runtime for each TFM. The task deduplicates findings across the whole build, so this
-    does not produce repeated warnings.
+    The SDK check needs only $(NETCoreSdkVersion), so it hangs off BeforeBuild, which every project
+    runs. It used to share the runtime target below, and that made it a silent no-op for every
+    netstandard2.0 project: those resolve no framework reference, so ResolveFrameworkReferences
+    contributes nothing and nothing downstream of it fires. A security check that quietly does
+    nothing is worse than one that is absent.
 
-    Deliberately no Inputs/Outputs. Incremental skipping would suppress the warning on every build
-    after the first, and a diagnostic that disappears on rebuild is worse than the millisecond it
-    costs to re-check a cached feed.
+    Deliberately no Inputs/Outputs on either. Incremental skipping would suppress the warning on
+    every build after the first, and a diagnostic that disappears on rebuild is worse than the
+    millisecond it costs to re-read a cached feed.
   -->
-  <Target Name="SdkCheck"
-          AfterTargets="ResolveFrameworkReferences"
+  <Target Name="SdkCheckSdk"
+          BeforeTargets="BeforeBuild"
           Condition="'$(SdkCheckEnabled)' == 'true' and
                      '$(DesignTimeBuild)' != 'true' and
                      '$(NCrunch)' != '1'">
     <SdkCheckTask
       SdkVersion="$(_SdkCheck_SdkVersion)"
+      IncludeRuntime="false"
+      IncludeRuntimePacks="false"
+      TreatAsError="$(SdkCheckTreatAsError)"
+      EolAsError="$(SdkCheckEolAsError)"
+      CacheHours="$(SdkCheckCacheHours)"
+      TimeoutSeconds="$(SdkCheckTimeoutSeconds)"
+      Offline="$(SdkCheckOffline)"
+      CacheDirectory="$(SdkCheckCacheDirectory)"
+      FeedOverride="$(SdkCheckFeedOverride)" />
+  </Target>
+
+  <!--
+    The runtime check does need ResolveFrameworkReferences, so that @(ResolvedFrameworkReference)
+    and @(ResolvedRuntimePack) are populated and the versions are read rather than guessed. Having
+    nothing to say for a netstandard2.0 project is correct here - such a project targets no runtime.
+
+    Runs once per target framework: a multi-targeted project resolves a different runtime for each.
+    SdkVersion is not passed, so the SDK is never reported twice.
+  -->
+  <Target Name="SdkCheckRuntime"
+          AfterTargets="ResolveFrameworkReferences"
+          Condition="'$(SdkCheckEnabled)' == 'true' and
+                     '$(DesignTimeBuild)' != 'true' and
+                     '$(NCrunch)' != '1'">
+    <SdkCheckTask
       FrameworkReferences="@(ResolvedFrameworkReference)"
       RuntimePacks="@(ResolvedRuntimePack)"
       TreatAsError="$(SdkCheckTreatAsError)"

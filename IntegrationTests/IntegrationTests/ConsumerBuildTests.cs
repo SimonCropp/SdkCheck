@@ -2,8 +2,8 @@ namespace SdkCheck.IntegrationTests;
 
 /// <summary>
 /// Builds real projects against the real package. This is the only place the tasks/ layout, the
-/// $(MSBuildRuntimeType) switch and the NuGet build/ auto-import are actually exercised - a unit
-/// test constructs the task directly and proves none of them.
+/// UsingTask resolution and the NuGet build/ auto-import are actually exercised - a unit test
+/// constructs the task directly and proves none of them.
 /// </summary>
 public class ConsumerBuildTests
 {
@@ -129,15 +129,34 @@ public class ConsumerBuildTests
     }
 
     /// <summary>
-    /// Names the assembly the build actually loaded the task from.
+    /// The package must load on an SDK older than the one this repo builds with.
     /// </summary>
     /// <remarks>
-    /// Nothing else here would notice if the $(MSBuildRuntimeType) condition in SdkCheck.targets
-    /// were inverted: netstandard2.0 loads perfectly well under MSBuild on .NET, so every other test
-    /// would still pass while every Visual Studio user got nothing at all.
+    /// Shipping a net10.0 task assembly, selected on $(MSBuildRuntimeType) == 'Core', broke every
+    /// consumer on an older SDK with MSB4062 "Could not load file or assembly 'System.Runtime,
+    /// Version=10.0.0.0'". 'Core' only means "MSBuild on .NET" - never which version of it - and no
+    /// test that builds with the repo's own SDK can catch that.
     /// </remarks>
     [Test]
-    public async Task DotnetBuildLoadsTheNetCoreTaskAssembly()
+    public async Task LoadsUnderAnOlderSdk()
+    {
+        var older = InstalledSdks.OlderThanRepo();
+        Skip.Unless(older != null, "no SDK older than the repo's is installed");
+
+        var result = await Build("Consumer.OldSdk", FeedShape.Vulnerable, sdkVersion: older);
+
+        await Assert.That(result.Combined).DoesNotContain("MSB4062").Because(result.Combined);
+        await Assert.That(result.ExitCode).IsEqualTo(0).Because(result.Combined);
+        // Loading is not enough - the task has to run, which also exercises the System.Text.Json
+        // closure shipped beside it.
+        await Assert.That(result.Combined).Contains("SdkCheck001").Because(result.Combined);
+    }
+
+    /// <summary>
+    /// Names the assembly the build actually loaded the task from.
+    /// </summary>
+    [Test]
+    public async Task LoadsTheNetStandardTaskAssembly()
     {
         var result = await Build("Consumer.Basic", FeedShape.Vulnerable, verbosity: "diagnostic");
 
@@ -153,7 +172,7 @@ public class ConsumerBuildTests
 
         await Assert.That(loaded).IsNotEmpty()
             .Because("no line reported which assembly SdkCheckTask was loaded from");
-        await Assert.That(loaded.Any(_ => _.Contains("tasks/net10.0/SdkCheck.dll", StringComparison.OrdinalIgnoreCase)))
+        await Assert.That(loaded.Any(_ => _.Contains("tasks/netstandard2.0/SdkCheck.dll", StringComparison.OrdinalIgnoreCase)))
             .IsTrue()
             .Because(string.Join(Environment.NewLine, loaded));
     }
@@ -172,6 +191,7 @@ public class ConsumerBuildTests
         FeedShape shape,
         IReadOnlyDictionary<string, string>? extraProperties = null,
         string verbosity = "minimal",
+        string? sdkVersion = null,
         [CallerMemberName] string caller = "")
     {
         var package = PackageUnderTest.Ensure();
@@ -185,13 +205,25 @@ public class ConsumerBuildTests
         File.WriteAllText(Path.Combine(work, "Directory.Build.props"), "<Project/>");
         File.WriteAllText(Path.Combine(work, "Directory.Build.targets"), "<Project/>");
 
-        // The repo's global.json goes with it. Without it the fixture resolves whichever SDK is
-        // newest on the machine, whose bundled targeting packs may not be published yet (NU1102) -
-        // and the generated feed would be describing a different SDK than the one doing the build.
-        File.Copy(
-            Path.Combine(TestEnvironment.RepoRoot, "global.json"),
-            Path.Combine(work, "global.json"),
-            overwrite: true);
+        if (sdkVersion == null)
+        {
+            // The repo's global.json goes with it. Without it the fixture resolves whichever SDK is
+            // newest on the machine, whose bundled targeting packs may not be published yet
+            // (NU1102) - and the generated feed would be describing a different SDK than the one
+            // doing the build.
+            File.Copy(
+                Path.Combine(TestEnvironment.RepoRoot, "global.json"),
+                Path.Combine(work, "global.json"),
+                overwrite: true);
+        }
+        else
+        {
+            // Written before the feed is generated below, so BuildRunner.SdkVersion(work) reports
+            // the pinned SDK and the feed describes the one that actually runs the build.
+            File.WriteAllText(
+                Path.Combine(work, "global.json"),
+                $"{{ \"sdk\": {{ \"version\": \"{sdkVersion}\", \"rollForward\": \"latestPatch\" }} }}");
+        }
 
         var properties = new Dictionary<string, string>
         {

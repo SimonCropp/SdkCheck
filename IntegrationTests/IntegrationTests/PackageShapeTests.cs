@@ -21,14 +21,20 @@ public class PackageShapeTests
                 """);
 
     [Test]
-    public async Task BothMsBuildRuntimesAreCovered()
+    public async Task OneAssemblyServesEveryMsBuildHost()
     {
         var entries = Entries();
 
-        // SdkCheck.targets picks by $(MSBuildRuntimeType): Core loads net10.0, .NET Framework
-        // MSBuild loads netstandard2.0. A missing leg is a silent no-op in that host.
-        await Assert.That(entries).Contains("tasks/net10.0/SdkCheck.dll");
         await Assert.That(entries).Contains("tasks/netstandard2.0/SdkCheck.dll");
+
+        // A framework-specific asset must not come back. Selecting one on
+        // $(MSBuildRuntimeType) == 'Core' - which only means "MSBuild on .NET", never which version -
+        // handed a net10.0 assembly to every consumer on an older SDK and failed their build with
+        // MSB4062.
+        await Assert.That(entries.Any(_ => _.StartsWith("tasks/net", StringComparison.Ordinal) &&
+                                           !_.StartsWith("tasks/netstandard", StringComparison.Ordinal)))
+            .IsFalse()
+            .Because(string.Join(Environment.NewLine, entries));
     }
 
     /// <summary>

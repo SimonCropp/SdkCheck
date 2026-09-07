@@ -10,8 +10,7 @@ version baseline is maintained here.
   the `.git` directory above `$(SolutionDir)` and writes packages to `<root>/nugets`.
 - `src/SdkCheck.Core` - the logic. Not published; it reaches consumers inside the task package and
   the tool.
-- `src/SdkCheck` - the MSBuild task package. `netstandard2.0` for .NET Framework MSBuild, `net10.0`
-  for `dotnet build`.
+- `src/SdkCheck` - the MSBuild task package. `netstandard2.0` only, and loaded by every host.
 - `src/SdkCheck.Tool` - the `sdkcheck` command.
 - `IntegrationTests/` is a separate solution. It builds real consumer projects against the nupkg the
   `src` Release build emits, so `dotnet build src -c Release` must run first.
@@ -46,3 +45,10 @@ version baseline is maintained here.
   point exposure stops being fixable.
 - Never hand a raw feed version to `Version.Parse`. Prerelease release-versions like `8.0.0-rc.2`
   throw. Use `ReleaseVersion`.
+- The task assembly stays `netstandard2.0`, and `SdkCheck.targets` selects it unconditionally.
+  `$(MSBuildRuntimeType) == 'Core'` means "MSBuild on .NET" and never says which version, so
+  selecting a framework-specific asset on it ships a package that only loads on the newest SDK.
+  That shipped once, in 0.2.0, and broke consumers with MSB4062.
+- The SDK check hangs off `BeforeBuild`; only the runtime check may depend on
+  `ResolveFrameworkReferences`. A netstandard2.0 project resolves no framework reference, so
+  anything downstream of that target silently never runs for it.

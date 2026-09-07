@@ -30,6 +30,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # As in test.yml: the integration suite below includes a test that builds a consumer with an
+      # SDK older than the repo's, and it skips unless one is present. A release is the last place
+      # that check should be silently skipped.
+      - name: Install an older SDK for the compatibility test
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json

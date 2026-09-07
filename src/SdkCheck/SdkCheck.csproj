@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- netstandard2.0 for .NET Framework MSBuild (Visual Studio, and Rider when it uses the
-         Framework toolchain), net10.0 for dotnet build. SdkCheck.targets picks by
-         $(MSBuildRuntimeType). -->
-    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <!-- netstandard2.0 only, and loaded by every host. It works under MSBuild on .NET Framework
+         and under MSBuild on .NET of any version, which a net10.0 asset does not: selecting one on
+         $(MSBuildRuntimeType) == 'Core' broke every consumer on an older SDK with MSB4062. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
     <NoPackageAnalysis>true</NoPackageAnalysis>
@@ -39,7 +39,6 @@
            'tasks/netstandard2.0//SdkCheck.dll'. A forward slash yields the same single-slash path
            on both platforms. -->
       <None Include="bin\$(Configuration)\netstandard2.0\*.dll" Pack="true" PackagePath="tasks/netstandard2.0/" Visible="false" />
-      <None Include="bin\$(Configuration)\net10.0\*.dll" Pack="true" PackagePath="tasks/net10.0/" Visible="false" />
     </ItemGroup>
   </Target>
 </Project>

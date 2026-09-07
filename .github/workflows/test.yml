@@ -26,9 +26,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Installed alongside the pinned SDK, purely so LoadsUnderAnOlderSdk has an older one to build
+      # a consumer with. Without it that test skips here, and the bug it exists to catch - a task
+      # assembly that only loads on the newest SDK, MSB4062 for everyone else - is invisible to CI.
+      # Ordered first so the global.json SDK is the one resolved by default afterwards.
+      - name: Install an older SDK for the compatibility test
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+
+      - name: Report installed SDKs
+        run: dotnet --list-sdks
 
       # This also packs: ProjectDefaults sets GeneratePackageOnBuild for Release package projects,
       # so the nupkgs land in ./nugets from the build itself.
