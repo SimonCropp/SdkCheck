@@ -150,5 +150,4 @@ every security release after it.
 
 ## Icon
 
-Placeholder, copied from SponsorCheck and pending replacement:
-https://thenounproject.com/icon/optical-illusion-344030/
+https://thenounproject.com/icon/pattern-7843781/
