@@ -9,12 +9,6 @@ public class Finding(
     string? eolDate = null,
     string? detail = null)
 {
-    /// <summary>
-    /// How many CVE ids to name inline before summarising the rest. A single .NET 8 SDK that is two
-    /// years behind is affected by ~70, which is not a readable build warning.
-    /// </summary>
-    public const int MaxListedCves = 10;
-
     public string Code { get; } = code;
     public Component Component { get; } = component;
     public string Channel { get; } = channel;
@@ -58,15 +52,16 @@ public class Finding(
     public string Message() =>
         Diagnostics.Render(Code, Body());
 
-    string ListCves()
-    {
-        var ids = Cves.Select(_ => _.Id).ToList();
-        if (ids.Count <= MaxListedCves)
-        {
-            return $"CVEs: {string.Join(", ", ids)}";
-        }
-
-        var listed = string.Join(", ", ids.Take(MaxListedCves));
-        return $"CVEs: {listed} and {ids.Count - MaxListedCves} more";
-    }
+    /// <summary>
+    /// Every id, never a subset.
+    /// </summary>
+    /// <remarks>
+    /// The count and the version to move to are already stated, and they are what drives the action -
+    /// it is the same whether three CVEs apply or seventy. The ids are here for audit traceability,
+    /// and a truncated audit list is the one form with no use: too long to skim, too short to rely
+    /// on. The build log is also the artifact that gets kept and grepped, so withholding ids from it
+    /// means the data exists only behind a separate tool invocation.
+    /// </remarks>
+    string ListCves() =>
+        $"CVEs: {string.Join(", ", Cves.Select(_ => _.Id))}";
 }

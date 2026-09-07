@@ -17,7 +17,9 @@ public class FindingTests
         Verify(new Finding(Diagnostics.Eol, sdk, "6.0", eolDate: "2024-11-12").Message())
             .Snapshot(
                 """
-                Channel is out of support. The .NET 6.0 channel reached end of support on 2024-11-12. No further security patches will ship for SDK 8.0.100, so any CVE found in it from now on is unfixable in place. Move to a supported channel.
+                Channel is out of support. The .NET 6.0 channel reached end of support on 2024-11-12.
+                No further security patches will ship for SDK 8.0.100, so any CVE found in it from now on is unfixable in place.
+                Move to a supported channel.
 
                 See: https://github.com/SimonCropp/SdkCheck/blob/main/docs/DiagnosticCodes.md#sdkcheck002
                 """);
@@ -49,12 +51,12 @@ public class FindingTests
                 """);
 
     /// <summary>
-    /// An SDK two years behind is affected by ~70 CVEs, which is not a readable build warning.
+    /// Seventy is what a real .NET 8 SDK two years behind produces. Every id is listed.
     /// </summary>
     [Test]
-    public Task LongCveListIsSummarised() =>
+    public Task LongCveListIsNotTruncated() =>
         Verify(new Finding(Diagnostics.SdkCve, sdk, "8.0", Cves(70), "8.0.204").Body())
-            .Snapshot("SDK 8.0.100 is affected by 70 CVEs published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204. CVEs: CVE-2024-0001, CVE-2024-0002, CVE-2024-0003, CVE-2024-0004, CVE-2024-0005, CVE-2024-0006, CVE-2024-0007, CVE-2024-0008, CVE-2024-0009, CVE-2024-0010 and 60 more");
+            .NotInline();
 
     [Test]
     public Task SingleCveIsNotPluralised() =>

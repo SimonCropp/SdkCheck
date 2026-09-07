@@ -22,12 +22,15 @@ long `LogWarning` overload:
 - **Syntax:** `SDK {version} is affected by {n} CVEs published since it shipped, fixed in later .NET
   {channel} releases. Update to {version}. CVEs: {ids}`
 - **Example:** `SDK 8.0.100 is affected by 70 CVEs published since it shipped, fixed in later .NET
-  8.0 releases. Update to 8.0.424. CVEs: CVE-2024-0056, CVE-2024-0057, ... and 60 more`
+  8.0 releases. Update to 8.0.424. CVEs: CVE-2024-0056, CVE-2024-0057, CVE-2024-20672, ...`
 - **Fix:** Install the named SDK. If a `global.json` pins the version, raise it there too, otherwise
   the machine keeps selecting the old one.
 
-At most ten CVE ids are named inline; an SDK two years behind is affected by around seventy, which is
-not a readable build warning. Use the tool with `--format json` for the full list.
+Every id is listed, never a subset. The count and the version to move to already state everything
+that drives the action, so the ids are there for audit traceability - and a truncated audit list is
+the one form with no use. An SDK two years behind lists around seventy, which is a long warning, but
+the count is stated first so the length is never a surprise. `--format json` on the tool gives the
+same ids with their urls.
 
 
 ## SdkCheck002

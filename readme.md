@@ -53,7 +53,7 @@ A build with a vulnerable SDK then says:
 ```
 warning SdkCheck001: SDK has published CVEs. SDK 8.0.100 is affected by 70 CVEs published since it
 shipped, fixed in later .NET 8.0 releases. Update to 8.0.424. CVEs: CVE-2024-0056, CVE-2024-0057,
-CVE-2024-20672, ... and 60 more
+CVE-2024-20672, CVE-2024-21319, CVE-2024-21386, ...
 ```
 
 The package is a `DevelopmentDependency` with no dependencies of its own. It contributes nothing to

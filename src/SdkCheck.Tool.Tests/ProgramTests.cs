@@ -61,7 +61,9 @@ public class ProgramTests
         Verify(Run(new() { Sdks = ["6.0.428"] }).Output)
             .Snapshot(
                 """
-                SdkCheck002: The .NET 6.0 channel reached end of support on 2024-11-12. No further security patches will ship for SDK 6.0.428, so any CVE found in it from now on is unfixable in place. Move to a supported channel.
+                SdkCheck002: The .NET 6.0 channel reached end of support on 2024-11-12.
+                No further security patches will ship for SDK 6.0.428, so any CVE found in it from now on is unfixable in place.
+                Move to a supported channel.
 
                 Checked 1 component(s), 1 with findings.
 
