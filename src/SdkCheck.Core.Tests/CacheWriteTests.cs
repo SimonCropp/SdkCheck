@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// The cache write, over a real fetch. Every other test here either points at an override directory
 /// or runs offline, so nothing else in any of the four projects reaches WriteCache at all - and the
 /// replace it performs is what runs on every refresh a real machine ever does.
@@ -75,7 +75,7 @@ public class CacheWriteTests
         Feed(server, cache).Get("8.0");
 
         var log = new List<string>();
-        using (File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None))
+        using (Block(cache, path))
         {
             var result = new ReleaseFeed(Options(server, cache, TimeSpan.Zero), log.Add).Get("8.0");
 
@@ -87,8 +87,44 @@ public class CacheWriteTests
         var failure = log.Single(_ => _.Contains("could not write cache"));
 
         await Assert.That(failure).Contains("8.0.json");
-        await Assert.That(failure).Contains("another process");
         await Assert.That(File.Exists(path)).IsTrue();
+    }
+
+    /// <summary>
+    /// Stops the cache from being written, for as long as the result is held.
+    /// </summary>
+    /// <remarks>
+    /// Windows holds the cache file open with no sharing, which is the sharing violation a
+    /// concurrent process produces. A rename on Unix answers to the directory rather than to any
+    /// handle on the file, so a held file there is replaced without complaint - the write is stopped
+    /// by taking write permission off the directory instead, which fails the temp file rather than
+    /// the move. Either way WriteCache reports it against the cache path.
+    /// </remarks>
+    static IDisposable Block(string cache, string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None);
+        }
+
+        return new ReadOnlyDirectory(cache);
+    }
+
+    [UnsupportedOSPlatform("windows")]
+    sealed class ReadOnlyDirectory :
+        IDisposable
+    {
+        string directory;
+        UnixFileMode mode;
+
+        public ReadOnlyDirectory(string directory)
+        {
+            this.directory = directory;
+            mode = File.GetUnixFileMode(directory);
+            File.SetUnixFileMode(directory, mode & ~(UnixFileMode.UserWrite | UnixFileMode.GroupWrite | UnixFileMode.OtherWrite));
+        }
+
+        public void Dispose() => File.SetUnixFileMode(directory, mode);
     }
 
     static ReleaseFeed Feed(FeedServer server, string cache, TimeSpan? ttl = null) =>

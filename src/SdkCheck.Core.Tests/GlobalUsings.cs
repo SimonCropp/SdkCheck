@@ -14,3 +14,4 @@ global using SdkCheck;
 global using TUnit.Core;
 global using VerifyTests.DiffPlex;
 global using static VerifyTUnit.Verifier;
+global using System.Runtime.Versioning;
