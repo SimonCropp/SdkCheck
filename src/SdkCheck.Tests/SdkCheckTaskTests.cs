@@ -189,19 +189,7 @@ public class SdkCheckTaskTests
     {
         var engine = new StubBuildEngine();
         Create(engine, "8.0.100").Execute();
-        return Verify(engine.Warnings)
-            .Snapshot(
-                """
-                [
-                  {
-                    Code: SdkCheck001,
-                    Message:
-                SDK has published CVEs. SDK 8.0.100 is affected by 3 CVEs published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204. CVEs: CVE-2024-0002, CVE-2024-0003, CVE-2024-0004
-
-                See: https://github.com/SimonCropp/SdkCheck/blob/main/docs/DiagnosticCodes.md#sdkcheck001
-                  }
-                ]
-                """);
+        return Verify(engine.Warnings);
     }
 
     static SdkCheckTask Create(IBuildEngine engine, string sdkVersion) =>

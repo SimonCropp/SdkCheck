@@ -10,8 +10,14 @@ public class SdkCheckerTests
             .Snapshot(
                 """
                 [
-                  SdkCheck001: SDK 8.0.100 is affected by 3 CVEs published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204. CVEs: CVE-2024-0002, CVE-2024-0003, CVE-2024-0004,
-                  SdkCheck003: runtime 8.0.2 is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.4. CVEs: CVE-2024-0004
+                  SdkCheck001: SDK 8.0.100 is affected by 3 CVEs published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204.
+                CVEs:
+                 * CVE-2024-0002
+                 * CVE-2024-0003
+                 * CVE-2024-0004,
+                  SdkCheck003: runtime 8.0.2 is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.4.
+                CVEs:
+                 * CVE-2024-0004
                 ]
                 """);
 

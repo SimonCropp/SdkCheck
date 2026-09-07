@@ -7,8 +7,12 @@ public class FindingTests
         Verify(new Finding(Diagnostics.SdkCve, sdk, "8.0", Cves(3), "8.0.204").Message())
             .Snapshot(
                 """
-                SDK has published CVEs. SDK 8.0.100 is affected by 3 CVEs published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204. CVEs: CVE-2024-0001, CVE-2024-0002, CVE-2024-0003
-
+                SDK has published CVEs.
+                SDK 8.0.100 is affected by 3 CVEs published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204.
+                CVEs:
+                 * CVE-2024-0001
+                 * CVE-2024-0002
+                 * CVE-2024-0003
                 See: https://github.com/SimonCropp/SdkCheck/blob/main/docs/DiagnosticCodes.md#sdkcheck001
                 """);
 
@@ -17,10 +21,10 @@ public class FindingTests
         Verify(new Finding(Diagnostics.Eol, sdk, "6.0", eolDate: "2024-11-12").Message())
             .Snapshot(
                 """
-                Channel is out of support. The .NET 6.0 channel reached end of support on 2024-11-12.
+                Channel is out of support.
+                The .NET 6.0 channel reached end of support on 2024-11-12.
                 No further security patches will ship for SDK 8.0.100, so any CVE found in it from now on is unfixable in place.
                 Move to a supported channel.
-
                 See: https://github.com/SimonCropp/SdkCheck/blob/main/docs/DiagnosticCodes.md#sdkcheck002
                 """);
 
@@ -35,8 +39,10 @@ public class FindingTests
             .Message())
             .Snapshot(
                 """
-                Runtime has published CVEs. runtime pack 8.0.0 (win-x64) is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.4. CVEs: CVE-2024-0001
-
+                Runtime has published CVEs.
+                runtime pack 8.0.0 (win-x64) is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.4.
+                CVEs:
+                 * CVE-2024-0001
                 See: https://github.com/SimonCropp/SdkCheck/blob/main/docs/DiagnosticCodes.md#sdkcheck003
                 """);
 
@@ -45,8 +51,8 @@ public class FindingTests
         Verify(new Finding(Diagnostics.Unavailable, sdk, "8.0", detail: "timed out").Message())
             .Snapshot(
                 """
-                Release metadata unavailable. Release metadata for .NET 8.0 could not be read (timed out), so SDK 8.0.100 was not checked.
-
+                Release metadata unavailable.
+                Release metadata for .NET 8.0 could not be read (timed out), so SDK 8.0.100 was not checked.
                 See: https://github.com/SimonCropp/SdkCheck/blob/main/docs/DiagnosticCodes.md#sdkcheck004
                 """);
 
@@ -61,7 +67,12 @@ public class FindingTests
     [Test]
     public Task SingleCveIsNotPluralised() =>
         Verify(new Finding(Diagnostics.SdkCve, sdk, "8.0", Cves(1), "8.0.204").Body())
-            .Snapshot("SDK 8.0.100 is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204. CVEs: CVE-2024-0001");
+            .Snapshot(
+                """
+                SDK 8.0.100 is affected by 1 CVE published since it shipped, fixed in later .NET 8.0 releases. Update to 8.0.204.
+                CVEs:
+                 * CVE-2024-0001
+                """);
 
     static List<Cve> Cves(int count) =>
         Enumerable.Range(1, count)

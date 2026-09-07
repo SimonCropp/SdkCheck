@@ -29,5 +29,9 @@ public static class Diagnostics
         $"{docsBaseUrl}#{code.ToLowerInvariant()}";
 
     public static string Render(string code, string body) =>
-        $"{NameFor(code)}. {body}{Environment.NewLine}{Environment.NewLine}See: {DocsUrl(code)}";
+        $"""
+         {NameFor(code)}.
+         {body}
+         See: {DocsUrl(code)}
+         """;
 }

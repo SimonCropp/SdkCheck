@@ -46,7 +46,10 @@ public class Finding(
 
         var upgrade = FixedIn == null ? "" : $" Update to {FixedIn}.";
         return
-            $"{Component.Describe()} is affected by {Cves.Count} {(Cves.Count == 1 ? "CVE" : "CVEs")} published since it shipped, fixed in later .NET {Channel} releases.{upgrade} {ListCves()}";
+            $"""
+             {Component.Describe()} is affected by {Cves.Count} {(Cves.Count == 1 ? "CVE" : "CVEs")} published since it shipped, fixed in later .NET {Channel} releases.{upgrade}
+             {ListCves()}
+             """;
     }
 
     public string Message() =>
@@ -63,5 +66,8 @@ public class Finding(
     /// means the data exists only behind a separate tool invocation.
     /// </remarks>
     string ListCves() =>
-        $"CVEs: {string.Join(", ", Cves.Select(_ => _.Id))}";
+        $"""
+         CVEs:
+         {string.Join('\n', Cves.Select(_ => $" * {_.Id}"))}
+         """;
 }
