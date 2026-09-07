@@ -13,11 +13,11 @@ Warns at build time when the .NET SDK or runtime in use has published CVEs, or s
 
 `NuGetAudit` (NU1901-NU1904) covers NuGet packages. The .NET 11 SDK covers itself, behind an opt-in property. Nothing covers the shared framework the output runs on.
 
-The usual substitutes all encode a constant that was correct the day it was written:
+The usual substitutes are a version someone typed once, or a check that never mentions a CVE:
 
 - A `global.json` version floor stops being a floor the moment a CVE is announced against the pinned version.
 - An MSBuild comparison against a hand-written baseline has the same problem, plus someone has to remember to raise it.
-- `dotnet sdk check` is live, but only knows support phase and latest-patch-available. It never  mentions a CVE, and it exits 0 either way.
+- `dotnet sdk check` is live, but only knows support phase and latest-patch-available. It never mentions a CVE, and it exits 0 either way.
 
 SdkCheck compares the SDK and runtime actually in use against Microsoft's live [release metadata](https://builds.dotnet.microsoft.com/dotnet/release-metadata/releases-index.json), which carries a `security` flag and a `cve-list` for every release. A CVE published tomorrow is reported tomorrow, with nothing to bump.
 
