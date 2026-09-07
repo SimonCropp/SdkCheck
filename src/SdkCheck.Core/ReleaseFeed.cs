@@ -207,23 +207,40 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
     }
 
     /// <summary>
-    /// Replaces the cache file with the temp one, without the file ever being absent.
+    /// Puts the temp file where the cache file goes, keeping the window in which there is no cache
+    /// file as small as the platform allows.
     /// </summary>
     /// <remarks>
     /// Deleting first and moving second leaves a window in which a concurrent reader finds no cache,
     /// and goes to the network for a feed that is sitting right there - which is the cost the cache
-    /// exists to avoid. netstandard2.0 has no overwriting File.Move, so the move is attempted first
-    /// and File.Replace handles the case where a file is already there.
+    /// exists to avoid. netstandard2.0 has no overwriting File.Move, so File.Replace performs the
+    /// overwrite and File.Move handles the first write, when there is nothing to replace.
+    ///
+    /// Which one runs is decided by whether the file is there, not by a failed move: an IOException
+    /// out of File.Move is a sharing violation or a full disk as readily as an existing destination,
+    /// and calling Replace on those only raises a second exception naming the wrong file and cause.
+    ///
+    /// Small, not closed: ReplaceFile can fail with ERROR_UNABLE_TO_MOVE_REPLACEMENT after it has
+    /// already removed the file being replaced, and no backup is asked for here. The cost of that is
+    /// one uncached fetch.
     /// </remarks>
     static void MoveOver(string temp, string path)
     {
+        if (File.Exists(path))
+        {
+            File.Replace(temp, path, null);
+            return;
+        }
+
         try
         {
             File.Move(temp, path);
         }
-        catch (IOException)
+        catch (IOException) when (File.Exists(path))
         {
-            File.Replace(temp, path, null);
+            // A concurrent writer landed between the check and the move. It wrote the same feed, so
+            // the temp file is dropped rather than put over the top of it.
+            Discard(temp);
         }
     }
 
