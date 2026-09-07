@@ -202,8 +202,13 @@ public class ReleaseFeed(FeedOptions options, Action<string>? log = null)
         }
     }
 
-    static string Describe(Exception exception) =>
-        exception is OperationCanceledException or TaskCanceledException
-            ? "timed out"
-            : exception.Message;
+    static string Describe(Exception exception)
+    {
+        if (exception is OperationCanceledException or TaskCanceledException)
+        {
+            return "timed out";
+        }
+
+        return exception.Message;
+    }
 }

@@ -71,9 +71,15 @@ public static class CveScanner
 
     static Release? FindShippingRelease(Component component, ChannelReleases channel) =>
         channel.Releases.FirstOrDefault(
-            _ => component.IsSdk
-                ? _.ShipsSdk(component.Version)
-                : _.ShipsRuntime(component.Version));
+            _ =>
+            {
+                if (component.IsSdk)
+                {
+                    return _.ShipsSdk(component.Version);
+                }
+
+                return _.ShipsRuntime(component.Version);
+            });
 
     static IEnumerable<Release> NewerSecurityReleases(ChannelReleases channel, Version shipped) =>
         channel.Releases

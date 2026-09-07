@@ -17,7 +17,7 @@ public static class ReleaseVersion
             return version;
         }
 
-        return version.Substring(0, dash);
+        return version[..dash];
     }
 
     public static bool IsPrerelease(string version) =>

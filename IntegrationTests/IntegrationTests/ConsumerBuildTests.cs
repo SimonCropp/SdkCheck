@@ -128,6 +128,32 @@ public class ConsumerBuildTests
         await Assert.That(result.Combined).DoesNotContain("SdkCheck00").Because(result.Combined);
     }
 
+    /// <summary>
+    /// Names the assembly the build actually loaded the task from.
+    /// </summary>
+    /// <remarks>
+    /// Nothing else here would notice if the $(MSBuildRuntimeType) condition in SdkCheck.targets
+    /// were inverted: netstandard2.0 loads perfectly well under MSBuild on .NET, so every other test
+    /// would still pass while every Visual Studio user got nothing at all.
+    /// </remarks>
+    [Test]
+    public async Task DotnetBuildLoadsTheNetCoreTaskAssembly()
+    {
+        var result = await Build("Consumer.Basic", FeedShape.Vulnerable, verbosity: "diagnostic");
+
+        var loaded = result.Combined
+            .Split('\n')
+            .Where(_ => _.Contains("SdkCheckTask", StringComparison.Ordinal) &&
+                        _.Contains("tasks", StringComparison.Ordinal))
+            .ToList();
+
+        await Assert.That(loaded).IsNotEmpty()
+            .Because("no line reported which assembly SdkCheckTask was loaded from");
+        await Assert.That(loaded.Any(_ => _.Contains(@"tasks\net10.0\SdkCheck.dll", StringComparison.OrdinalIgnoreCase)))
+            .IsTrue()
+            .Because(string.Join(Environment.NewLine, loaded));
+    }
+
     static IReadOnlyList<string> FrameworksWarnedAbout(string output) =>
         output.Split('\n')
             .Where(_ => _.Contains("is affected by", StringComparison.Ordinal))
@@ -141,6 +167,7 @@ public class ConsumerBuildTests
         string fixture,
         FeedShape shape,
         IReadOnlyDictionary<string, string>? extraProperties = null,
+        string verbosity = "minimal",
         [CallerMemberName] string caller = "")
     {
         var package = PackageUnderTest.Ensure();
@@ -180,6 +207,6 @@ public class ConsumerBuildTests
         var project = Directory.GetFiles(work, "*.csproj").Single();
         var packages = Path.Combine(work, ".pkgs");
         Directory.CreateDirectory(packages);
-        return await DotnetCliRunner.Run("build", project, properties, work, packages);
+        return await DotnetCliRunner.Run("build", project, properties, work, packages, verbosity);
     }
 }

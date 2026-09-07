@@ -8,6 +8,7 @@ public static class DotnetCliRunner
         IReadOnlyDictionary<string, string>? properties = null,
         string? workingDirectory = null,
         string? packagesDirectory = null,
+        string verbosity = "minimal",
         Cancel cancellation = default)
     {
         var info = new ProcessStartInfo("dotnet")
@@ -31,7 +32,7 @@ public static class DotnetCliRunner
         info.ArgumentList.Add(projectPath);
         info.ArgumentList.Add("--nologo");
         info.ArgumentList.Add("--verbosity");
-        info.ArgumentList.Add("minimal");
+        info.ArgumentList.Add(verbosity);
         if (properties != null)
         {
             foreach (var property in properties)
