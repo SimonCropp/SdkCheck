@@ -18,20 +18,6 @@
     <_SdkCheck_Assembly>$(_SdkCheck_TasksDir)netstandard2.0\SdkCheck.dll</_SdkCheck_Assembly>
 
     <SdkCheckEnabled Condition="'$(SdkCheckEnabled)' == ''">true</SdkCheckEnabled>
-
-    <!--
-      The SDK doing the build is the same whichever target framework is being built, so it is
-      checked on the first one only. The runtime check below still runs for every target framework,
-      because that one genuinely differs per TFM.
-
-      The task also deduplicates in-process, but that cannot be relied on here: MSBuild farms inner
-      builds out to separate nodes, and a registered task object lives in one node's registry.
-    -->
-    <_SdkCheck_SdkVersion>$(NETCoreSdkVersion)</_SdkCheck_SdkVersion>
-    <_SdkCheck_SdkVersion
-      Condition="'$(TargetFrameworks)' != '' and
-                 '$(TargetFramework)' != $([MSBuild]::ValueOrDefault('$(TargetFrameworks)', '').Split(';')[0])"
-    ></_SdkCheck_SdkVersion>
   </PropertyGroup>
 
   <UsingTask TaskName="SdkCheckTask"
@@ -55,8 +41,16 @@
           Condition="'$(SdkCheckEnabled)' == 'true' and
                      '$(DesignTimeBuild)' != 'true' and
                      '$(NCrunch)' != '1'">
+    <!--
+      Passed from every inner build of a multi-targeted project, and deduplicated by the task. It
+      used to be blanked on all but the first entry of $(TargetFrameworks), which made
+      "dotnet build -f <second TFM>" - and a CI matrix building one framework per job - skip the
+      SDK check without a word. The deduplication is per MSBuild node, so a build that farms the
+      inner builds out to separate nodes can report the same SDK once per node. A repeated warning
+      is a cost; a skipped one is the failure mode this package exists to remove.
+    -->
     <SdkCheckTask
-      SdkVersion="$(_SdkCheck_SdkVersion)"
+      SdkVersion="$(NETCoreSdkVersion)"
       IncludeRuntime="false"
       IncludeRuntimePacks="false"
       TreatAsError="$(SdkCheckTreatAsError)"

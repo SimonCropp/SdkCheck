@@ -41,6 +41,16 @@ class ReportedFinding
     [JsonPropertyName("fixedIn")]
     public string? FixedIn { get; set; }
 
+    /// <summary>
+    /// Always written, including for the codes that have no feature band in play, so a consumer can
+    /// read it without testing the code first.
+    /// </summary>
+    [JsonPropertyName("crossesFeatureBand")]
+    public bool CrossesFeatureBand { get; set; }
+
+    [JsonPropertyName("bandNewest")]
+    public string? BandNewest { get; set; }
+
     [JsonPropertyName("eolDate")]
     public string? EolDate { get; set; }
 

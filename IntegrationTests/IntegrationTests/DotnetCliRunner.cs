@@ -9,6 +9,7 @@ public static class DotnetCliRunner
         string? workingDirectory = null,
         string? packagesDirectory = null,
         string verbosity = "minimal",
+        IReadOnlyList<string>? arguments = null,
         Cancel cancellation = default)
     {
         var info = new ProcessStartInfo("dotnet")
@@ -33,6 +34,14 @@ public static class DotnetCliRunner
         info.ArgumentList.Add("--nologo");
         info.ArgumentList.Add("--verbosity");
         info.ArgumentList.Add(verbosity);
+        if (arguments != null)
+        {
+            foreach (var argument in arguments)
+            {
+                info.ArgumentList.Add(argument);
+            }
+        }
+
         if (properties != null)
         {
             foreach (var property in properties)

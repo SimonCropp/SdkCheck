@@ -1,6 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <!-- Written across several lines deliberately. A rule that picked the first entry of
+         $(TargetFrameworks) once split it without trimming, so the entry matched no inner build and
+         the SDK check was silently disabled for the whole project. -->
+    <TargetFrameworks>
+      net8.0;
+      net10.0
+    </TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SdkCheck" Version="$(SdkCheckVersion)" PrivateAssets="all" />

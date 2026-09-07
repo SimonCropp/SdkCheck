@@ -32,11 +32,12 @@ public class SdkCheckTaskTests
     }
 
     /// <summary>
-    /// An out-of-support channel is an error by default: unlike a CVE with a patch behind it, there
-    /// is no version to move to on that channel at all.
+    /// An out-of-support SDK is an error by default: unlike a CVE with a patch behind it, there is
+    /// no version to move to on that channel at all, and the SDK doing the build is a property of
+    /// the machine that installing a supported one fixes today.
     /// </summary>
     [Test]
-    public async Task EolIsAnErrorByDefault()
+    public async Task EolSdkIsAnErrorByDefault()
     {
         var engine = new StubBuildEngine();
         var task = Create(engine, "6.0.428");
@@ -47,7 +48,7 @@ public class SdkCheckTaskTests
     }
 
     [Test]
-    public async Task EolCanBeDowngradedToAWarning()
+    public async Task EolSdkCanBeDowngradedToAWarning()
     {
         var engine = new StubBuildEngine();
         var task = Create(engine, "6.0.428");
@@ -56,6 +57,41 @@ public class SdkCheckTaskTests
         await Assert.That(task.Execute()).IsTrue();
         await Assert.That(engine.Errors).IsEmpty();
         await Assert.That(engine.Warnings[0].Code).IsEqualTo("SdkCheck002");
+    }
+
+    /// <summary>
+    /// A target framework on a dead channel warns rather than failing the build. Unlike the SDK, it
+    /// is a support decision the project made deliberately - a library targets net6.0 for the
+    /// consumers still there - so failing on the day the channel dies breaks a build that has not
+    /// changed, from a remote feed, over a choice already made.
+    /// </summary>
+    [Test]
+    public async Task EolRuntimeIsAWarningByDefault()
+    {
+        var engine = new StubBuildEngine();
+        var task = Create(engine, "8.0.204");
+        task.FrameworkReferences = [Item("Microsoft.NETCore.App", ("TargetingPackVersion", "6.0.36"))];
+
+        await Assert.That(task.Execute()).IsTrue();
+        await Assert.That(engine.Errors).IsEmpty();
+        await Assert.That(engine.Warnings).HasSingleItem();
+        await Assert.That(engine.Warnings[0].Code).IsEqualTo("SdkCheck002");
+    }
+
+    /// <summary>
+    /// Set explicitly, the flag applies to every component rather than only to the SDK.
+    /// </summary>
+    [Test]
+    public async Task EolRuntimeCanBeEscalatedToAnError()
+    {
+        var engine = new StubBuildEngine();
+        var task = Create(engine, "8.0.204");
+        task.EolAsError = "true";
+        task.FrameworkReferences = [Item("Microsoft.NETCore.App", ("TargetingPackVersion", "6.0.36"))];
+
+        await Assert.That(task.Execute()).IsFalse();
+        await Assert.That(engine.Errors).HasSingleItem();
+        await Assert.That(engine.Errors[0].Code).IsEqualTo("SdkCheck002");
     }
 
     [Test]
@@ -171,7 +207,7 @@ public class SdkCheckTaskTests
     /// <summary>
     /// MSBuild hands every property across as a string, and an unset one arrives empty rather than
     /// as the default the consumer would have written. A nonsense value falls back to the default
-    /// rather than failing the build over a typo.
+    /// rather than failing the build over a typo - here the SDK default, which is an error.
     /// </summary>
     [Test]
     public async Task UnparseableFlagsFallBackToTheirDefault()

@@ -22,9 +22,34 @@ long `LogWarning` overload:
 - **Syntax:** `SDK {version} is affected by {n} CVEs published since it shipped, fixed in later .NET
   {channel} releases. Update to {version}. CVEs: {ids}`
 - **Example:** `SDK 8.0.100 is affected by 70 CVEs published since it shipped, fixed in later .NET
-  8.0 releases. Update to 8.0.424. CVEs: CVE-2024-0056, CVE-2024-0057, CVE-2024-20672, ...`
+  8.0 releases. Update to 8.0.130. CVEs: CVE-2024-0056, CVE-2024-0057, CVE-2024-20672, ...`
 - **Fix:** Install the named SDK. If a `global.json` pins the version, raise it there too, otherwise
   the machine keeps selecting the old one.
+
+The version named stays on the feature band the SDK is already on. 8.0.100 is told to move to
+8.0.130, not to the channel's latest 8.0.424: a `global.json` pinned to the 1xx band does not roll to
+4xx, so naming the latest asks for a change the reader may not be in a position to make. The band's
+newest is named only when it shipped in a release at least as new as the last release that fixed one
+of the CVEs listed, since an older one carries some of them and not the rest. A release flagged
+security that names no CVE is not one of those, and does not raise the bar.
+
+When the band cannot be held to, the channel's latest is named instead and the message says both that
+the band changes and why. Either nothing newer shipped on the band at all:
+
+```
+Update to 8.0.204, on a different feature band: nothing newer shipped on the band in use.
+```
+
+or something did and it shipped before the last of the fixes, so it carries part of the list and not
+the rest. That version is named too: it is a partial fix that keeps a `global.json` pin
+intact, and which of the two to take is the reader's call, not this package's.
+
+```
+Update to 8.0.204, on a different feature band: the band in use stops at 8.0.105, which shipped before the last of these fixes.
+```
+
+The band is described as different rather than later because it can be either. A component on a band
+the channel has since stopped shipping is sent to a latest that sits below it: 8.0.300 to 8.0.204.
 
 Every id is listed, never a subset. The count and the version to move to already state everything
 that drives the action, so the ids are there for audit traceability - and a truncated audit list is
@@ -36,7 +61,8 @@ same ids with their urls.
 ## SdkCheck002
 
 - **Name:** Channel is out of support
-- **Level:** **Error.** Set `SdkCheckEolAsError` to `false` to downgrade it to a warning.
+- **Level:** **Error** when the SDK running the build sits on the channel, warning when a runtime
+  does. Set `SdkCheckEolAsError` to `true` or `false` to apply one level to both.
 - **Meaning:** The channel has passed its end-of-support date, or is marked `eol` in the release
   metadata. No further security patches will ship for it, so any CVE published against it from now on
   is unfixable in place.
@@ -46,8 +72,13 @@ same ids with their urls.
 - **Example:** `The .NET 6.0 channel reached end of support on 2024-11-12. ...`
 - **Fix:** Move to a supported channel.
 
-This is the one case that errors by default. Everything else has a version to move to on the same
-channel; this does not.
+The SDK is the one case that errors by default. Everything else has a version to move to on the same
+channel; a dead channel does not. The SDK doing the build is a property of the machine, so installing
+a supported one fixes it that day.
+
+A target framework on a dead channel is left as a warning. Targeting one is a decision the project
+made deliberately, for consumers who are still there, and no build that has not changed should start
+failing on the date the channel dies - least of all on the say-so of a remote feed.
 
 It is also the case that is easiest to get wrong, and the reason end of support is tested before the
 version comparison. On a dead channel there is by definition no newer security release, so a plain

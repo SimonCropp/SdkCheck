@@ -21,6 +21,8 @@ static class JsonReport
                     Version = _.Component.Version,
                     Channel = _.Channel,
                     FixedIn = _.FixedIn,
+                    CrossesFeatureBand = _.CrossesFeatureBand,
+                    BandNewest = _.BandNewest,
                     EolDate = _.EolDate,
                     Message = _.Body(),
                     Cves = _.Cves.Select(cve => new ReportedCve { Id = cve.Id, Url = cve.Url }).ToList()

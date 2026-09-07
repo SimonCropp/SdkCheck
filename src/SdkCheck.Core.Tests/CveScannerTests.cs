@@ -2,13 +2,19 @@ public class CveScannerTests
 {
     static readonly DateTime now = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>
+    /// 8.0.100 is on the 1xx band, so the version to move to is 8.0.106 - the 1xx SDK shipped by the
+    /// newest security release - rather than the channel's latest 8.0.204, which a global.json
+    /// pinned to the band cannot roll to.
+    /// </summary>
     [Test]
     public async Task SdkBehindTwoSecurityReleases()
     {
         var finding = Scan(new(ComponentKind.Sdk, "8.0.100"));
 
         await Assert.That(finding!.Code).IsEqualTo(Diagnostics.SdkCve);
-        await Assert.That(finding.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.FixedIn).IsEqualTo("8.0.106");
+        await Assert.That(finding.CrossesFeatureBand).IsFalse();
         await Verify(finding.Cves.Select(_ => _.Id))
             .Snapshot(
                 """
@@ -69,6 +75,104 @@ public class CveScannerTests
                   CVE-2024-0004
                 ]
                 """);
+    }
+
+    /// <summary>
+    /// A band that has stopped shipping has nothing to move to on itself, so the channel's latest is
+    /// named and the message says the band changes. Nothing shipped on the band, so there is no
+    /// version to report as too old - and 8.0.204 is on an earlier band than the 3xx being left,
+    /// which is why the message calls the band different rather than later.
+    /// </summary>
+    [Test]
+    public async Task DiscontinuedFeatureBandFallsBackToTheChannelLatest()
+    {
+        var channel = Feeds.Load("8.0");
+        // 8.0.300 shipped with the original release and never again.
+        channel.Releases.Single(_ => _.ReleaseVersion == "8.0.0").Sdks.Add(new() { Version = "8.0.300" });
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0.300"), channel, now);
+
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.CrossesFeatureBand).IsTrue();
+        await Assert.That(finding.BandNewest).IsNull();
+    }
+
+    /// <summary>
+    /// The newest SDK on the band is only the answer when it shipped in a release at least as new as
+    /// the last security release counted. 8.0.105 came with 8.0.3, before the security release 8.0.4,
+    /// so naming it would report a fix that carries only some of the CVEs. It is reported as what the
+    /// band stops at instead, since a message claiming nothing shipped on the band would be false.
+    /// </summary>
+    [Test]
+    public async Task StaleFeatureBandIsNotNamedAsTheFix()
+    {
+        var channel = Feeds.Load("8.0");
+        channel.Releases.Single(_ => _.ReleaseVersion == "8.0.4").Sdks.RemoveAll(_ => _.Version == "8.0.106");
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0.100"), channel, now);
+
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.CrossesFeatureBand).IsTrue();
+        await Assert.That(finding.BandNewest).IsEqualTo("8.0.105");
+    }
+
+    /// <summary>
+    /// A feed value the version parser cannot make sense of has to come back as a message rather
+    /// than an exception - nothing this package discovers may fail a build. There is no band to hold
+    /// the recommendation to, so the channel's latest is named, and nothing claims a band change.
+    /// </summary>
+    [Test]
+    public async Task SdkVersionThatDoesNotParseFallsBackToTheChannelLatest()
+    {
+        var channel = Feeds.Load("8.0");
+        channel.Releases.Single(_ => _.ReleaseVersion == "8.0.0").Sdks.Add(new() { Version = "8.0.banana" });
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0.banana"), channel, now);
+
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.CrossesFeatureBand).IsFalse();
+        await Assert.That(finding.BandNewest).IsNull();
+    }
+
+    /// <summary>
+    /// The same for a version with no patch component. "8.0" parses, but sits on no feature band, so
+    /// there is again nothing to hold the fix to and nothing to say has changed.
+    /// </summary>
+    [Test]
+    public async Task SdkVersionWithNoFeatureBandFallsBackToTheChannelLatest()
+    {
+        var channel = Feeds.Load("8.0");
+        channel.Releases.Single(_ => _.ReleaseVersion == "8.0.0").Sdks.Add(new() { Version = "8.0" });
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0"), channel, now);
+
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.204");
+        await Assert.That(finding.CrossesFeatureBand).IsFalse();
+        await Assert.That(finding.BandNewest).IsNull();
+    }
+
+    /// <summary>
+    /// A release flagged security that names no CVE fixes nothing, so it cannot be the thing an SDK
+    /// is behind. Counting it would raise the bar over 8.0.105 - which carries every CVE reported
+    /// here - and send a reader off their feature band for nothing.
+    /// </summary>
+    [Test]
+    public async Task SecurityReleaseWithNoCvesDoesNotRaiseTheBar()
+    {
+        var channel = Feeds.Load("8.0");
+        var last = channel.Releases.Single(_ => _.ReleaseVersion == "8.0.4");
+        last.CveList.Clear();
+        last.Sdks.RemoveAll(_ => _.Version == "8.0.106");
+
+        var finding = CveScanner.Scan(new(ComponentKind.Sdk, "8.0.100"), channel, now);
+
+        // 8.0.2 is the last release that fixed any of these, and 8.0.105 came after it.
+        await Assert.That(finding!.FixedIn).IsEqualTo("8.0.105");
+        await Assert.That(finding.CrossesFeatureBand).IsFalse();
+        await Assert.That(finding.BandNewest).IsNull();
+        // The same three CVEs are still reported: what the empty release changes is the bar, not the
+        // list. 8.0.4 lists nothing of its own, and CVE-2024-0004 comes from 8.0.2 either way.
+        await Assert.That(finding.Cves.Count).IsEqualTo(3);
     }
 
     [Test]

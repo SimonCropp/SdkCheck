@@ -44,6 +44,39 @@ public static class ReleaseVersion
     }
 
     /// <summary>
+    /// The SDK feature band a version sits on: "8.0.106" and "8.0.199" both give 1, "8.0.204" gives
+    /// 2. Null for anything without a patch component.
+    /// </summary>
+    /// <remarks>
+    /// A global.json pinned to a band does not roll across one, so the band is what decides whether
+    /// an upgrade recommendation is something the reader can act on.
+    /// </remarks>
+    public static int? FeatureBand(string? version)
+    {
+        var parsed = ParseNumeric(version);
+        if (parsed == null)
+        {
+            return null;
+        }
+
+        return FeatureBand(parsed);
+    }
+
+    /// <summary>
+    /// The band of an already parsed version, for callers holding one - the string form parses, and
+    /// the same string is commonly compared and banded in one pass.
+    /// </summary>
+    public static int? FeatureBand(Version parsed)
+    {
+        if (parsed.Build < 0)
+        {
+            return null;
+        }
+
+        return parsed.Build / 100;
+    }
+
+    /// <summary>
     /// The release channel a version belongs to: "8.0.424" and "8.0.0-rc.2" both give "8.0".
     /// </summary>
     public static string? Channel(string? version)
