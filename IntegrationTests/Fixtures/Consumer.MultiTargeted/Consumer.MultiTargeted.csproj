@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Written across several lines deliberately. Splitting $(TargetFrameworks) without trimming
-         leaves the newline and indentation on the first entry, which matched no inner build and
-         silently disabled the SDK check for the whole project. -->
+    <!-- Written across several lines deliberately. A rule that picked the first entry of
+         $(TargetFrameworks) once split it without trimming, so the entry matched no inner build and
+         the SDK check was silently disabled for the whole project. -->
     <TargetFrameworks>
       net8.0;
       net10.0

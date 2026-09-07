@@ -91,20 +91,40 @@ public class ConsumerBuildTests
     }
 
     /// <summary>
-    /// The target runs once per target framework because the resolved runtime differs per TFM, so
-    /// the per-build deduplication is the only thing stopping a multi-targeted project reporting the
-    /// same SDK twice.
+    /// The SDK version is passed from every inner build, so the deduplication in the task is the
+    /// only thing stopping a multi-targeted project reporting the same SDK once per target
+    /// framework. That deduplication lives in one MSBuild node's registry, which is why this build
+    /// is pinned to a single node: with several, MSBuild may hand each inner build to a different
+    /// node and the SDK is reported once per node. A repeated warning is the accepted cost of never
+    /// skipping the check.
     /// </summary>
     [Test]
     public async Task MultiTargetedProjectReportsOnce()
     {
-        var result = await Build("Consumer.MultiTargeted", FeedShape.Vulnerable);
+        var result = await Build("Consumer.MultiTargeted", FeedShape.Vulnerable, arguments: ["-m:1"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0).Because(result.Combined);
         // Counting the raw string would count noise: MSBuild prints each line of a multi-line
         // warning separately and repeats the lot in its summary. The set of target frameworks it was
         // annotated with is the thing being asserted.
         await Assert.That(FrameworksWarnedAbout(result.Combined)).HasSingleItem().Because(result.Combined);
+    }
+
+    /// <summary>
+    /// Building one framework of a multi-targeted project - "dotnet build -f", or a CI matrix with
+    /// one job per framework - runs only that inner build. A rule that checked the SDK on the first
+    /// entry of $(TargetFrameworks) skipped it silently for every other one.
+    /// </summary>
+    [Test]
+    public async Task SingleFrameworkBuildOfAMultiTargetedProjectStillChecksTheSdk()
+    {
+        var result = await Build(
+            "Consumer.MultiTargeted",
+            FeedShape.Vulnerable,
+            new Dictionary<string, string> { ["TargetFramework"] = "net10.0" });
+
+        await Assert.That(result.ExitCode).IsEqualTo(0).Because(result.Combined);
+        await Assert.That(result.Combined).Contains("SdkCheck001").Because(result.Combined);
     }
 
     /// <summary>
@@ -207,6 +227,7 @@ public class ConsumerBuildTests
         string verbosity = "minimal",
         string? sdkVersion = null,
         string? eolChannel = null,
+        IReadOnlyList<string>? arguments = null,
         [CallerMemberName] string caller = "")
     {
         var package = PackageUnderTest.Ensure();
@@ -258,6 +279,6 @@ public class ConsumerBuildTests
         var project = Directory.GetFiles(work, "*.csproj").Single();
         var packages = Path.Combine(work, ".pkgs");
         Directory.CreateDirectory(packages);
-        return await DotnetCliRunner.Run("build", project, properties, work, packages, verbosity);
+        return await DotnetCliRunner.Run("build", project, properties, work, packages, verbosity, arguments);
     }
 }

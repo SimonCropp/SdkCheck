@@ -15,9 +15,10 @@ public class SdkCheckTask :
     readonly CancelSource cancellation = new();
 
     /// <summary>
-    /// $(NETCoreSdkVersion) - the SDK running this build. Empty on all but the first target
-    /// framework of a multi-targeted project, since the SDK does not vary by TFM. Not [Required]
-    /// for that reason: MSBuild rejects an empty value for a required parameter.
+    /// $(NETCoreSdkVersion) - the SDK running this build. Passed from every target framework of a
+    /// multi-targeted project and deduplicated per build, so a single-framework build of such a
+    /// project still checks it. Not [Required]: the runtime target leaves it empty, and MSBuild
+    /// rejects an empty value for a required parameter.
     /// </summary>
     public string SdkVersion { get; set; } = "";
 
