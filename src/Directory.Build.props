@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
   <PropertyGroup>
-    <NoWarn>CS1591;NU1608;NU1109;SC023;PolyfillTargetsForNuget</NoWarn>
+    <NoWarn>CS1591;NU1608;NU1109;PolyfillTargetsForNuget</NoWarn>
     <Version>0.5.0</Version>
     <LangVersion>preview</LangVersion>
     <AssemblyVersion>1.0.0</AssemblyVersion>
@@ -13,6 +13,7 @@
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
     <NuGetAuditMode>all</NuGetAuditMode>
     <SignAssembly>false</SignAssembly>
-    <Verify_SponsorshipLicenseIgnored>true</Verify_SponsorshipLicenseIgnored>
+    <Verify_SponsorshipExemption>OpenSource</Verify_SponsorshipExemption>
+    <Verify_SponsorshipExemptionUntil>2027-08</Verify_SponsorshipExemptionUntil>
   </PropertyGroup>
 </Project>
