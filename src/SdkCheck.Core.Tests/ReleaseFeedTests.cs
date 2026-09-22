@@ -28,7 +28,7 @@ public class ReleaseFeedTests
     public async Task UnreadableOverrideIsReportedNotThrown()
     {
         using var directory = new TempDirectory();
-        File.WriteAllText(Path.Combine(directory, "8.0.json"), "{ not json");
+        await File.WriteAllTextAsync(Path.Combine(directory, "8.0.json"), "{ not json");
 
         var result = Feed(new() { OverrideDirectory = directory }).Get("8.0");
 
@@ -81,7 +81,7 @@ public class ReleaseFeedTests
     public async Task CorruptCacheIsIgnored()
     {
         using var cache = new TempDirectory();
-        File.WriteAllText(Path.Combine(cache, "8.0.json"), "{\"fetched\":\"2024");
+        await File.WriteAllTextAsync(Path.Combine(cache, "8.0.json"), "{\"fetched\":\"2024");
 
         var result = Feed(new() { CacheDirectory = cache, Offline = true }).Get("8.0");
 
@@ -96,7 +96,7 @@ public class ReleaseFeedTests
         // still has to complete.
         using var directory = new TempDirectory();
         var blocked = Path.Combine(directory, "blocked");
-        File.WriteAllText(blocked, "");
+        await File.WriteAllTextAsync(blocked, "");
 
         var result = Feed(new() { CacheDirectory = blocked, Offline = true }).Get("8.0");
 

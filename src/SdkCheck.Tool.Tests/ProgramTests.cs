@@ -107,14 +107,14 @@ public class ProgramTests
     {
         // 8.0.106 removed from the security release 8.0.4, so the 1xx band stops at 8.0.105, which
         // shipped before it - the case where the fix has to leave the band.
-        var channel = JsonNode.Parse(File.ReadAllText(Path.Combine(Fixtures, "8.0.json")))!;
+        var channel = JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(Fixtures, "8.0.json")))!;
         var sdks = channel["releases"]!.AsArray()
             .Single(_ => (string?) _!["release-version"] == "8.0.4")!["sdks"]!
             .AsArray();
         sdks.Remove(sdks.Single(_ => (string?) _!["version"] == "8.0.106"));
 
         using var directory = new TempDirectory();
-        File.WriteAllText(Path.Combine(directory, "8.0.json"), channel.ToJsonString());
+        await File.WriteAllTextAsync(Path.Combine(directory, "8.0.json"), channel.ToJsonString());
 
         var (_, output) = Run(new() { Sdks = ["8.0.100"], Format = "json" }, directory);
 

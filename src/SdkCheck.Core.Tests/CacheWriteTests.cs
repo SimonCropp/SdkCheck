@@ -32,7 +32,7 @@ public class CacheWriteTests
         var path = Path.Combine(cache, "8.0.json");
 
         Feed(server, cache).Get("8.0");
-        var first = File.ReadAllText(path);
+        var first = await File.ReadAllTextAsync(path);
 
         // Nothing is held for any time, so this fetches again rather than reading what it just wrote.
         var result = Feed(server, cache, TimeSpan.Zero).Get("8.0");
@@ -40,7 +40,7 @@ public class CacheWriteTests
         await Assert.That(result.Channel!.LatestSdk).IsEqualTo("8.0.204");
         await Assert.That(server.Requests).IsEqualTo(2);
         await Assert.That(File.Exists(path)).IsTrue();
-        await Assert.That(File.ReadAllText(path)).IsNotEqualTo(first);
+        await Assert.That(await File.ReadAllTextAsync(path)).IsNotEqualTo(first);
     }
 
     /// <summary>
