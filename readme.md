@@ -1,6 +1,6 @@
 # <img src="/src/icon.png" height="30px"> SdkCheck
 
-[![Build status](https://img.shields.io/github/actions/workflow/status/SimonCropp/SdkCheck/test.yml?branch=main)](https://github.com/SimonCropp/SdkCheck/actions)
+[![Build status](https://img.shields.io/github/actions/workflow/status/SimonCropp/SdkCheck/build.yml?branch=main)](https://github.com/SimonCropp/SdkCheck/actions/workflows/build.yml)
 [![NuGet Status](https://img.shields.io/nuget/v/SdkCheck.svg?label=SdkCheck)](https://www.nuget.org/packages/SdkCheck/)
 [![NuGet Status](https://img.shields.io/nuget/v/SdkCheck.Tool.svg?label=SdkCheck.Tool)](https://www.nuget.org/packages/SdkCheck.Tool/)
 
