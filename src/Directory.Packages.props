@@ -10,9 +10,9 @@
     <PackageVersion Include="Microsoft.Build.Framework" Version="18.9.6" Pinned="true" />
     <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="18.9.6" Pinned="true" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
-    <PackageVersion Include="Microsoft.Sbom.Targets" Version="4.1.13" />
     <PackageVersion Include="Polyfill" Version="11.4.0" />
     <PackageVersion Include="ProjectDefaults" Version="1.0.181" />
+    <PackageVersion Include="Sbom" Version="0.2.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.12" />
     <PackageVersion Include="TUnit" Version="1.69.0" />
     <PackageVersion Include="Verify" Version="33.1.4" />

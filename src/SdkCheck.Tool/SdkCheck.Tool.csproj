@@ -15,7 +15,7 @@
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="ProjectDefaults" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" Condition="'$(CI)' == 'true'" />
+    <PackageReference Include="Sbom" PrivateAssets="all" />
     <ProjectReference Include="..\SdkCheck.Core\SdkCheck.Core.csproj" />
   </ItemGroup>
 </Project>

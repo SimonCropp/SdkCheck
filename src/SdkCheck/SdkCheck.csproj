@@ -23,7 +23,7 @@
     <PackageReference Include="Microsoft.Build.Framework" PrivateAssets="all" ExcludeAssets="Runtime" />
     <PackageReference Include="ProjectDefaults" PrivateAssets="all" />
     <PackageReference Include="Polyfill" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" Condition="'$(CI)' == 'true'" />
+    <PackageReference Include="Sbom" PrivateAssets="all" />
     <ProjectReference Include="..\SdkCheck.Core\SdkCheck.Core.csproj" PrivateAssets="all" />
   </ItemGroup>
 
