@@ -10,5 +10,4 @@ global using System.Text.RegularExpressions;
 global using System.Threading;
 global using System.Threading.Tasks;
 global using TUnit.Core;
-global using VerifyTests.DiffPlex;
 global using static VerifyTUnit.Verifier;

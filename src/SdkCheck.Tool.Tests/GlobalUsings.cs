@@ -9,5 +9,4 @@ global using System.Threading.Tasks;
 global using SdkCheck;
 global using SdkCheck.Tool;
 global using TUnit.Core;
-global using VerifyTests.DiffPlex;
 global using static VerifyTUnit.Verifier;

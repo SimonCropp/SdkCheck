@@ -9,5 +9,4 @@ global using Microsoft.Build.Framework;
 global using TaskItem = Microsoft.Build.Utilities.TaskItem;
 global using SdkCheck;
 global using TUnit.Core;
-global using VerifyTests.DiffPlex;
 global using static VerifyTUnit.Verifier;
