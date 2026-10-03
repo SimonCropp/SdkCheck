@@ -1,6 +1,6 @@
 public static class Feeds
 {
-    public static string Directory => Path.Combine(AppContext.BaseDirectory, "Fixtures");
+    public static string Directory => Path.Combine(AppContext.BaseDirectory, ProjectFiles.Fixtures);
 
     /// <summary>
     /// Deserializes fresh on every call rather than going through ReleaseFeed, whose process wide

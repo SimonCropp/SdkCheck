@@ -1,6 +1,6 @@
 public class SdkCheckTaskTests
 {
-    static string Fixtures => Path.Combine(AppContext.BaseDirectory, "Fixtures");
+    static string Fixtures => Path.Combine(AppContext.BaseDirectory, ProjectFiles.Fixtures);
 
     [Test]
     public async Task VulnerableSdkWarns()
