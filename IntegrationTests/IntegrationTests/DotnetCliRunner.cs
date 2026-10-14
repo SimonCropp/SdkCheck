@@ -22,6 +22,13 @@ public static class DotnetCliRunner
         };
         info.Environment["DOTNET_NOLOGO"] = "true";
         info.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "true";
+        // "dotnet run" starts this test host with both pointing into the SDK that ran it, and a
+        // child inherits them. The child's global.json still picks its MSBuild, but these override
+        // where that MSBuild finds its targets and tasks - so a fixture pinned to an older SDK was
+        // built by the older engine with the repo SDK's targets, which is not a build any consumer
+        // has, and fails with MSB4216 once the two disagree about task hosts.
+        info.Environment.Remove("MSBuildSDKsPath");
+        info.Environment.Remove("MSBuildExtensionsPath");
         if (packagesDirectory != null)
         {
             // Without an isolated package directory the global cache serves a previously restored

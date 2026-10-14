@@ -181,6 +181,11 @@ public class ConsumerBuildTests
 
         var result = await Build("Consumer.OldSdk", FeedShape.Vulnerable, sdkVersion: older);
 
+        // Any diagnostic raised from the SDK's own targets names the SDK directory it came from. The
+        // repo's SDK appearing there means the older engine was handed the newer targets, and the
+        // build being judged is not the one this test is named for.
+        var repoSdk = DotnetCliRunner.SdkVersion(TestEnvironment.RepoRoot);
+        await Assert.That(result.Combined.Replace('\\', '/')).DoesNotContain($"/sdk/{repoSdk}/").Because(result.Combined);
         await Assert.That(result.Combined).DoesNotContain("MSB4062").Because(result.Combined);
         await Assert.That(result.ExitCode).IsEqualTo(0).Because(result.Combined);
         // Loading is not enough - the task has to run, which also exercises the System.Text.Json
